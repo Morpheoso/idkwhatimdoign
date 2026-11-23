@@ -34,6 +34,79 @@
       height: 100%;
       pointer-events: none;
     }
+    .top-menu {
+      position: fixed;
+      top: 20px;
+      right: 22px;
+      z-index: 5;
+      font-family: ui-monospace, SFMono-Regular, Consolas, monospace;
+    }
+    .menu-toggle {
+      display: grid;
+      width: 46px;
+      height: 44px;
+      align-content: center;
+      justify-items: center;
+      gap: 5px;
+      border: 1px solid #55efb0;
+      border-radius: 3px;
+      background: rgb(7 13 11 / 94%);
+      box-shadow: 0 0 14px rgb(85 239 176 / 24%);
+      cursor: pointer;
+    }
+    .menu-toggle span {
+      display: block;
+      width: 19px;
+      height: 2px;
+      border-radius: 2px;
+      background: #a6ffd9;
+      transition: transform 160ms ease, opacity 160ms ease;
+    }
+    .menu-toggle[aria-expanded="true"] span:first-child {
+      transform: translateY(7px) rotate(45deg);
+    }
+    .menu-toggle[aria-expanded="true"] span:nth-child(2) { opacity: 0; }
+    .menu-toggle[aria-expanded="true"] span:last-child {
+      transform: translateY(-7px) rotate(-45deg);
+    }
+    .menu-toggle:focus-visible,
+    .terminal-menu a:focus-visible {
+      outline: 2px solid #a6ffd9;
+      outline-offset: 3px;
+    }
+    .terminal-menu {
+      position: absolute;
+      top: 54px;
+      right: 0;
+      width: 184px;
+      padding: 6px;
+      border: 1px solid #55efb0;
+      border-radius: 3px;
+      background: rgb(7 13 11 / 97%);
+      box-shadow: 0 0 20px rgb(85 239 176 / 22%), 0 14px 36px rgb(0 0 0 / 55%);
+    }
+    .terminal-menu[hidden] { display: none; }
+    .terminal-menu a {
+      display: flex;
+      min-height: 44px;
+      align-items: center;
+      padding: 0 12px;
+      color: #a6ffd9;
+      font-size: 14px;
+      letter-spacing: .04em;
+      text-decoration: none;
+      transition: background-color 140ms ease, color 140ms ease;
+    }
+    .terminal-menu a + a { border-top: 1px dashed rgb(85 239 176 / 28%); }
+    .terminal-menu a::before {
+      content: ">";
+      margin-right: 9px;
+      color: #55efb0;
+    }
+    .terminal-menu a:hover {
+      background: rgb(85 239 176 / 12%);
+      color: #fff;
+    }
     main {
       width: min(100%, 680px);
       padding: clamp(32px, 8vw, 72px);
@@ -87,16 +160,64 @@
     }
     @media (prefers-reduced-motion: reduce) {
       h1, .message { animation: none; }
+      .menu-toggle span, .terminal-menu a { transition: none; }
+    }
+    @media (max-width: 480px) {
+      .top-menu { top: 14px; right: 14px; }
     }
   </style>
 </head>
 <body>
   <canvas id="pipe-saver" aria-hidden="true"></canvas>
+  <div class="top-menu">
+    <button
+      class="menu-toggle"
+      id="menu-toggle"
+      type="button"
+      aria-label="Open navigation menu"
+      aria-expanded="false"
+      aria-controls="site-menu"
+    >
+      <span></span><span></span><span></span>
+    </button>
+    <nav class="terminal-menu" id="site-menu" aria-label="Main navigation" hidden>
+      <a href="#weather">Weather</a>
+      <a href="#base">Base</a>
+      <a href="#roni">Roni</a>
+    </nav>
+  </div>
   <main>
     <p class="eyebrow">A little corner of the internet</p>
     <h1>Hello!</h1>
     <p class="message">Welcome to my website.</p>
   </main>
+  <script>
+    (() => {
+      const menuArea = document.querySelector(".top-menu");
+      const menuButton = document.getElementById("menu-toggle");
+      const menu = document.getElementById("site-menu");
+
+      function setMenuOpen(open) {
+        menu.hidden = !open;
+        menuButton.setAttribute("aria-expanded", String(open));
+        menuButton.setAttribute("aria-label", open ? "Close navigation menu" : "Open navigation menu");
+      }
+
+      menuButton.addEventListener("click", () => setMenuOpen(menu.hidden));
+      menu.addEventListener("click", event => {
+        if (event.target.closest("a")) setMenuOpen(false);
+      });
+      document.addEventListener("click", event => {
+        if (!menuArea.contains(event.target)) setMenuOpen(false);
+      });
+      document.addEventListener("keydown", event => {
+        if (event.key === "Escape" && !menu.hidden) {
+          setMenuOpen(false);
+          menuButton.focus();
+        }
+      });
+    })();
+  </script>
   <script>
     (() => {
       const canvas = document.getElementById("pipe-saver");
