@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <meta name="referrer" content="strict-origin-when-cross-origin">
   <meta name="theme-color" content="#05070b">
-  <title>Flight WX | Local Weather</title>
+  <title>PWS | Local Weather</title>
   <style>
     :root {
       color-scheme: dark;
@@ -24,40 +24,40 @@
       margin: 0;
       background: #05070b;
       color: #ecf4f3;
+      position: relative;
+      isolation: isolate;
     }
     button, input { font: inherit; }
     button, a, input { -webkit-tap-highlight-color: transparent; }
     .space {
       position: fixed;
       inset: 0;
-      z-index: -2;
+      z-index: 0;
       overflow: hidden;
       background:
-        radial-gradient(ellipse at 50% 45%, rgb(20 41 72 / 38%), transparent 64%),
-        radial-gradient(ellipse at 12% 18%, rgb(49 80 111 / 16%), transparent 42%),
+        radial-gradient(ellipse at 50% 62%, rgb(29 61 105 / 30%), transparent 62%),
+        radial-gradient(ellipse at 50% 48%, rgb(33 21 70 / 23%), transparent 74%),
         #030509;
     }
     .space::before, .space::after {
       content: "";
       position: absolute;
-      inset: -100% 0 0;
-      opacity: .65;
-      background-image:
-        radial-gradient(1px 1px at 21px 33px, #fff 98%, transparent),
-        radial-gradient(1px 1px at 130px 87px, #b6d9ff 98%, transparent),
-        radial-gradient(2px 2px at 202px 177px, #fff 98%, transparent),
-        radial-gradient(1px 1px at 298px 29px, #c9e7ff 98%, transparent);
-      background-size: 340px 230px;
-      animation: star-drift 42s linear infinite;
+      pointer-events: none;
+      border: 1px solid rgb(99 166 227 / 22%);
+      border-radius: 50%;
+      box-shadow: 0 0 24px rgb(55 130 211 / 8%), inset 0 0 30px rgb(55 130 211 / 6%);
+    }
+    .space::before {
+      inset: 15% -28% 10%;
+      transform: rotate(-17deg);
     }
     .space::after {
-      opacity: .34;
-      background-size: 510px 390px;
-      animation-duration: 68s;
-      animation-direction: reverse;
+      inset: -26% 18% 35%;
+      border-color: rgb(163 120 222 / 19%);
+      transform: rotate(23deg);
+      box-shadow: 0 0 30px rgb(134 90 201 / 8%), inset 0 0 28px rgb(134 90 201 / 5%);
     }
-    @keyframes star-drift { to { transform: translateY(230px); } }
-    .page { width: min(1120px, calc(100% - 28px)); margin: 0 auto; padding: 22px 0 34px; }
+    .page { position: relative; z-index: 1; width: min(1120px, calc(100% - 28px)); margin: 0 auto; padding: 22px 0 34px; }
     .masthead, .row, .section-title, .location-line { display: flex; justify-content: space-between; align-items: center; gap: 14px; flex-wrap: wrap; }
     .masthead { margin-bottom: 18px; }
     .brand { display: flex; align-items: center; gap: 12px; }
@@ -126,33 +126,22 @@
         radial-gradient(ellipse at 50% 80%, rgb(47 74 108 / 20%), transparent 56%);
       isolation: isolate;
     }
-    .canopy::before {
-      content: "";
+    #weather-sky {
       position: absolute;
-      inset: 0 0 auto;
+      inset: 0;
+      z-index: 0;
+      width: 100%;
       height: 100%;
-      z-index: -1;
-      background-image:
-        radial-gradient(1px 1px at 7% 18%, #fff 98%, transparent),
-        radial-gradient(1px 1px at 19% 42%, #b8d7ff 98%, transparent),
-        radial-gradient(2px 2px at 32% 13%, #fff 98%, transparent),
-        radial-gradient(1px 1px at 47% 35%, #d7eaff 98%, transparent),
-        radial-gradient(1px 1px at 61% 16%, #fff 98%, transparent),
-        radial-gradient(2px 2px at 73% 48%, #d7eaff 98%, transparent),
-        radial-gradient(1px 1px at 89% 24%, #fff 98%, transparent),
-        radial-gradient(1px 1px at 95% 67%, #b8d7ff 98%, transparent);
-      background-size: 100% 100%;
-      animation: canopy-stars 36s linear infinite;
+      pointer-events: none;
     }
-    @keyframes canopy-stars { from { transform: translateY(-5%); } to { transform: translateY(5%); } }
     .canopy::after {
       content: "";
       position: absolute;
-      inset: 0;
+      inset: 0 0 auto;
+      height: 6px;
       z-index: 2;
       pointer-events: none;
-      background: linear-gradient(112deg, transparent 0 14%, rgb(3 6 10 / 83%) 14.5% 16%, transparent 16.5% 83.5%, rgb(3 6 10 / 83%) 84% 85.5%, transparent 86%);
-      border-top: 6px solid rgb(3 6 10 / 75%);
+      background: rgb(3 6 10 / 62%);
     }
     .canopy-grid { position: relative; z-index: 1; display: grid; grid-template-columns: 1fr auto 1fr; align-items: end; gap: 18px; }
     .canopy-side { display: grid; gap: 8px; padding-bottom: 6px; color: #daebf1; font: 12px ui-monospace, SFMono-Regular, Consolas, monospace; text-shadow: 0 1px 8px #000; }
@@ -228,14 +217,13 @@
       .forecast { gap: 2px; }
       .forecast-day { padding-inline: 4px; }
     }
-    @media (prefers-reduced-motion: reduce) { .space::before, .space::after, .canopy::before { animation: none; } }
   </style>
 </head>
 <body>
   <div class="space" aria-hidden="true"></div>
   <main class="page">
     <header class="masthead">
-      <div class="brand"><div class="brand-mark" aria-hidden="true">◉</div><div><div class="brand-name">FLIGHT WX</div><div class="eyebrow">LOCAL WEATHER SYSTEM</div></div></div>
+      <div class="brand"><div class="brand-mark" aria-hidden="true">◉</div><div><div class="brand-name">PWS</div><div class="eyebrow">PERSONAL WEATHER SYSTEM</div></div></div>
       <div class="mast-actions"><span class="status">● SYSTEM READY</span><a class="home-link" href="index.html">HOME</a></div>
     </header>
 
@@ -255,6 +243,7 @@
       <div class="location-line"><div><div class="eyebrow">LOCAL WEATHER · <span id="location-name">—</span></div><div class="micro" id="updated-at">WAITING FOR WEATHER DATA</div></div><button class="button" id="change-zip" type="button">CHANGE ZIP</button></div>
       <section class="cockpit" aria-label="Weather cockpit instruments">
         <div class="canopy">
+          <canvas id="weather-sky" aria-hidden="true"></canvas>
           <div class="canopy-grid">
             <div class="canopy-side"><span class="eyebrow">WIND VECTOR</span><strong id="wind-readout">—</strong><span id="visibility-readout">LOCAL CONDITIONS</span></div>
             <div class="temperature"><strong id="temperature">—°</strong><span id="condition">LOADING CONDITIONS</span></div>
@@ -303,6 +292,17 @@
       const dashboard = document.getElementById("dashboard");
       const numberFormat = new Intl.NumberFormat(undefined, { maximumFractionDigits: 0 });
       const svgNS = "http://www.w3.org/2000/svg";
+      const skyCanvas = document.getElementById("weather-sky");
+      const skyContext = skyCanvas.getContext("2d");
+      const reducedMotion = window.matchMedia("(prefers-reduced-motion: reduce)");
+      let skyWidth = 0;
+      let skyHeight = 0;
+      let skyRatio = 1;
+      let skyState = { weatherCode: 2, isDay: true };
+      let stars = [];
+      let lastSkyFrame = 0;
+      let skyFrame = 0;
+      let activeZip = "";
 
       function polar(radius, degrees) {
         const angle = degrees * Math.PI / 180;
@@ -410,6 +410,201 @@
 
       function setText(id, value) { document.getElementById(id).textContent = value; }
 
+      function makeStars() {
+        stars = Array.from({ length: Math.max(45, Math.floor(skyWidth / 11)) }, () => ({
+          x: Math.random() * skyWidth,
+          y: Math.random() * skyHeight,
+          radius: .45 + Math.random() * 1.2,
+          speed: 1.8 + Math.random() * 5,
+          alpha: .4 + Math.random() * .6
+        }));
+      }
+
+      function drawCloud(x, y, size, dark = false) {
+        const ctx = skyContext;
+        ctx.beginPath();
+        ctx.moveTo(x - size * 1.15, y + size * .24);
+        ctx.bezierCurveTo(x - size * 1.42, y - size * .08, x - size * 1.12, y - size * .55, x - size * .64, y - size * .48);
+        ctx.bezierCurveTo(x - size * .49, y - size * 1.06, x + size * .28, y - size * 1.03, x + size * .43, y - size * .5);
+        ctx.bezierCurveTo(x + size * .96, y - size * .7, x + size * 1.32, y - size * .28, x + size * 1.08, y + size * .1);
+        ctx.bezierCurveTo(x + size * .94, y + size * .49, x - size * .73, y + size * .48, x - size * 1.15, y + size * .24);
+        ctx.closePath();
+        ctx.fillStyle = dark ? "#8998a2" : "#fff9e8";
+        ctx.fill();
+        ctx.strokeStyle = "#050a13";
+        ctx.lineWidth = Math.max(2, size * .1);
+        ctx.lineJoin = "round";
+        ctx.stroke();
+        ctx.beginPath();
+        ctx.moveTo(x - size * .72, y + size * .18);
+        ctx.bezierCurveTo(x - size * .2, y + size * .42, x + size * .35, y + size * .36, x + size * .79, y + size * .15);
+        ctx.strokeStyle = dark ? "#384c62" : "#65bfe0";
+        ctx.lineWidth = Math.max(1.5, size * .06);
+        ctx.lineCap = "round";
+        ctx.stroke();
+      }
+
+      function drawSkyline() {
+        const ctx = skyContext;
+        const baseY = skyHeight;
+        const buildingWidth = Math.max(27, skyWidth / 25);
+        const count = Math.ceil(skyWidth / buildingWidth);
+        const maxHeight = Math.max(28, skyHeight * .23);
+        for (let building = 0; building < count; building += 1) {
+          const x = building * buildingWidth - 1;
+          const width = buildingWidth * (.8 + (building % 3) * .06);
+          const height = maxHeight * (.38 + ((building * 7 + 3) % 9) * .055);
+          const top = baseY - height;
+          ctx.fillStyle = building % 2 ? "#101b2b" : "#0a1423";
+          ctx.fillRect(x, top, width, height + 2);
+          ctx.strokeStyle = "#03070e";
+          ctx.lineWidth = Math.max(1.5, skyWidth / 650);
+          ctx.strokeRect(x, top, width, height + 2);
+          if (building % 5 === 2) {
+            ctx.fillStyle = "#101b2b";
+            ctx.fillRect(x + width * .34, top - 7, width * .32, 8);
+            ctx.fillRect(x + width * .47, top - 15, width * .06, 8);
+          }
+          const cols = Math.max(1, Math.floor(width / 13));
+          const rows = Math.max(1, Math.floor(height / 13));
+          for (let row = 0; row < rows; row += 1) {
+            for (let col = 0; col < cols; col += 1) {
+              if ((building * 5 + row * 3 + col * 7) % 6 < 2) {
+                ctx.fillStyle = (building + row + col) % 3 === 0 ? "#63c7e2" : "#ffd84d";
+                ctx.fillRect(x + 4 + col * 12, top + 5 + row * 12, 4, 6);
+              }
+            }
+          }
+        }
+        ctx.strokeStyle = "#050a13";
+        ctx.lineWidth = 3;
+        ctx.beginPath();
+        ctx.moveTo(0, baseY - 1);
+        ctx.lineTo(skyWidth, baseY - 1);
+        ctx.stroke();
+      }
+
+      function drawSky(now = 0, delta = 0) {
+        if (!skyWidth || !skyHeight) return;
+        const ctx = skyContext;
+        ctx.clearRect(0, 0, skyWidth, skyHeight);
+        const { weatherCode, isDay } = skyState;
+        const isWet = [51, 53, 55, 56, 57, 61, 63, 65, 66, 67, 80, 81, 82, 95, 96, 99].includes(weatherCode);
+        const isSnow = [71, 73, 75, 77, 85, 86].includes(weatherCode);
+        const isCloudy = weatherCode >= 2 || [45, 48].includes(weatherCode);
+        const sky = ctx.createLinearGradient(0, 0, 0, skyHeight);
+        if (isDay) {
+          sky.addColorStop(0, isWet ? "#668ba0" : "#38bde2");
+          sky.addColorStop(.52, isWet ? "#3c6780" : "#1688bd");
+          sky.addColorStop(1, "#102b50");
+        } else {
+          sky.addColorStop(0, "#01050c");
+          sky.addColorStop(.7, "#07152a");
+          sky.addColorStop(1, "#102b50");
+        }
+        ctx.fillStyle = sky;
+        ctx.fillRect(0, 0, skyWidth, skyHeight);
+
+        if (!isDay) {
+          for (const star of stars) {
+            star.y += star.speed * delta / 1000;
+            if (star.y > skyHeight * .78) { star.y = -2; star.x = Math.random() * skyWidth; }
+            ctx.globalAlpha = star.alpha;
+            ctx.fillStyle = "#fff";
+            ctx.beginPath();
+            ctx.arc(star.x, star.y, star.radius, 0, Math.PI * 2);
+            ctx.fill();
+          }
+          ctx.globalAlpha = 1;
+        } else if (weatherCode <= 2) {
+          const sunRadius = Math.min(skyWidth, skyHeight) * .105;
+          ctx.beginPath();
+          ctx.arc(skyWidth * .78, skyHeight * .34, sunRadius, 0, Math.PI * 2);
+          ctx.fillStyle = "#ffd84d";
+          ctx.shadowColor = "rgb(255 216 77 / 52%)";
+          ctx.shadowBlur = 18;
+          ctx.fill();
+          ctx.shadowBlur = 0;
+          ctx.strokeStyle = "#070b13";
+          ctx.lineWidth = 3;
+          ctx.stroke();
+        }
+
+        if (isCloudy || isWet || isSnow) {
+          const cloudCount = isWet || isSnow ? 4 : weatherCode >= 3 ? 5 : 2;
+          for (let i = 0; i < cloudCount; i += 1) {
+            const x = skyWidth * ((i * .29 + .08) % 1.08);
+            const y = skyHeight * (.24 + (i % 3) * .12);
+            const size = Math.min(42, skyWidth / 17) * (i % 2 ? .78 : 1);
+            drawCloud(x, y, size, isWet || isSnow);
+          }
+        }
+
+        drawSkyline();
+
+        if (isWet || isSnow) {
+          ctx.save();
+          ctx.strokeStyle = isSnow ? "rgb(235 246 255 / 75%)" : "rgb(174 223 255 / 62%)";
+          ctx.lineWidth = isSnow ? 1.5 : 1.2;
+          for (let i = 0; i < 58; i += 1) {
+            const x = (i * 73 + (now * (isSnow ? .012 : .08))) % (skyWidth + 18) - 9;
+            const y = (i * 47 + (now * (isSnow ? .018 : .22))) % (skyHeight + 25);
+            ctx.beginPath();
+            if (isSnow) {
+              ctx.arc(x, y, 1.7, 0, Math.PI * 2);
+            } else {
+              ctx.moveTo(x, y);
+              ctx.lineTo(x - 5, y + 13);
+            }
+            ctx.stroke();
+          }
+          ctx.restore();
+        }
+      }
+
+      function animateSky(now) {
+        if (dashboard.hidden || document.hidden) { skyFrame = 0; return; }
+        if (now - lastSkyFrame >= 42) {
+          drawSky(now, Math.min(80, now - lastSkyFrame));
+          lastSkyFrame = now;
+        }
+        skyFrame = window.requestAnimationFrame(animateSky);
+      }
+
+      function resizeSky() {
+        const bounds = skyCanvas.getBoundingClientRect();
+        if (!bounds.width || !bounds.height) return;
+        skyRatio = Math.min(window.devicePixelRatio || 1, 2);
+        skyWidth = bounds.width;
+        skyHeight = bounds.height;
+        skyCanvas.width = Math.round(skyWidth * skyRatio);
+        skyCanvas.height = Math.round(skyHeight * skyRatio);
+        skyContext.setTransform(skyRatio, 0, 0, skyRatio, 0, 0);
+        makeStars();
+        drawSky();
+      }
+
+      function setSkyConditions(weatherCode, isDay) {
+        skyState = { weatherCode: Number(weatherCode), isDay: Boolean(isDay) };
+        resizeSky();
+        if (skyFrame) window.cancelAnimationFrame(skyFrame);
+        lastSkyFrame = 0;
+        if (!reducedMotion.matches) skyFrame = window.requestAnimationFrame(animateSky);
+      }
+
+      window.addEventListener("resize", resizeSky, { passive: true });
+      document.addEventListener("visibilitychange", () => {
+        if (!document.hidden && !dashboard.hidden && !reducedMotion.matches && !skyFrame) {
+          skyFrame = window.requestAnimationFrame(animateSky);
+        }
+      });
+      reducedMotion.addEventListener?.("change", () => {
+        if (reducedMotion.matches && skyFrame) window.cancelAnimationFrame(skyFrame);
+        skyFrame = 0;
+        drawSky();
+        if (!reducedMotion.matches && !dashboard.hidden) skyFrame = window.requestAnimationFrame(animateSky);
+      });
+
       function renderForecast(daily) {
         const list = document.getElementById("forecast-list");
         list.replaceChildren();
@@ -473,7 +668,7 @@
           const forecastUrl = new URL("https://api.open-meteo.com/v1/forecast");
           forecastUrl.search = new URLSearchParams({
             latitude: String(place.latitude), longitude: String(place.longitude), timezone: "auto", forecast_days: "3",
-            current: "temperature_2m,relative_humidity_2m,apparent_temperature,weather_code,wind_speed_10m,wind_direction_10m",
+            current: "temperature_2m,relative_humidity_2m,apparent_temperature,weather_code,wind_speed_10m,wind_direction_10m,is_day,uv_index",
             daily: "temperature_2m_max,temperature_2m_min,weather_code,sunrise,sunset,uv_index_max,moon_phase",
             temperature_unit: "fahrenheit", wind_speed_unit: "mph"
           });
@@ -503,7 +698,7 @@
           setText("humidity-value", `${numberFormat.format(current.relative_humidity_2m)}%`);
           setText("time-value", localTime(current.time));
           setGauge("humidity", current.relative_humidity_2m, `${numberFormat.format(current.relative_humidity_2m)}%`, `Humidity ${numberFormat.format(current.relative_humidity_2m)} percent`);
-          setGauge("uv", daily.uv_index_max?.[0], Number.isFinite(daily.uv_index_max?.[0]) ? daily.uv_index_max[0].toFixed(1) : "—", `UV index ${daily.uv_index_max?.[0] ?? "unavailable"}`);
+          setGauge("uv", current.uv_index, Number.isFinite(current.uv_index) ? current.uv_index.toFixed(1) : "—", `UV index ${current.uv_index ?? "unavailable"}`);
           const aqi = air?.current?.us_aqi;
           setGauge("aqi", aqi, Number.isFinite(aqi) ? String(Math.round(aqi)) : "N/A", `US air quality index ${aqi ?? "unavailable"}`);
           setGauge("wind", current.wind_speed_10m, `${numberFormat.format(current.wind_speed_10m)}`, `Wind speed ${numberFormat.format(current.wind_speed_10m)} miles per hour`);
@@ -512,6 +707,8 @@
           setText("updated-at", `MODEL UPDATE ${localTime(current.time)} · TIMES SHOWN IN LOCAL TIME`);
           zipScreen.hidden = true;
           dashboard.hidden = false;
+          activeZip = zip;
+          setSkyConditions(current.weather_code, current.is_day === 1);
         } catch (error) {
           zipMessage.textContent = error instanceof Error ? error.message : "Could not load weather. Please try again.";
         } finally {
@@ -534,7 +731,11 @@
         zipScreen.hidden = false;
         zipInput.focus();
       });
+      window.setInterval(() => {
+        if (activeZip && !dashboard.hidden && !document.hidden) loadWeather(activeZip);
+      }, 15 * 60 * 1000);
     })();
   </script>
 </body>
 </html>
+
