@@ -254,15 +254,22 @@
       let height = 0;
       let unit = 24;
       let gridLimit = 8;
+      let zoom = 1;
       let frameId;
       let lastStep = 0;
       let puzzleStarted = 0;
 
       function project(point) {
+        const scaledUnit = unit * zoom;
         return {
-          x: width / 2 + (point.x - point.y) * unit * 0.866,
-          y: height / 2 + (point.x + point.y) * unit * 0.5 - point.z * unit * 0.9
+          x: width / 2 + (point.x - point.y) * scaledUnit * 0.866,
+          y: height / 2 + (point.x + point.y) * scaledUnit * 0.5 - point.z * scaledUnit * 0.9
         };
+      }
+
+      function changeZoom(factor) {
+        zoom = Math.max(0.14, Math.min(2.5, zoom * factor));
+        draw();
       }
 
       function isInside(point) {
@@ -346,12 +353,12 @@
         context.lineJoin = "round";
         context.lineCap = "round";
         context.strokeStyle = "#08090d";
-        context.lineWidth = 21;
+        context.lineWidth = Math.max(2, 21 * zoom);
         context.stroke();
         context.strokeStyle = pipe.hue;
-        context.lineWidth = 15;
+        context.lineWidth = Math.max(1.5, 15 * zoom);
         context.shadowColor = pipe.hue;
-        context.shadowBlur = 12;
+        context.shadowBlur = 12 * zoom;
         context.stroke();
         context.shadowBlur = 0;
 
@@ -361,13 +368,13 @@
           const dx = b.x - a.x;
           const dy = b.y - a.y;
           const length = Math.hypot(dx, dy) || 1;
-          const offsetX = (dy / length) * -3;
-          const offsetY = (dx / length) * 3;
+          const offsetX = (dy / length) * -3 * zoom;
+          const offsetY = (dx / length) * 3 * zoom;
           context.beginPath();
           context.moveTo(a.x + offsetX, a.y + offsetY);
           context.lineTo(b.x + offsetX, b.y + offsetY);
           context.strokeStyle = "rgb(255 255 255 / 42%)";
-          context.lineWidth = 2;
+          context.lineWidth = Math.max(0.6, 2 * zoom);
           context.lineCap = "round";
           context.stroke();
         }
@@ -402,11 +409,24 @@
 
       window.addEventListener("resize", start, { passive: true });
       reducedMotion.addEventListener?.("change", start);
+      window.addEventListener("wheel", event => {
+        if (event.ctrlKey || event.metaKey) return;
+        event.preventDefault();
+        changeZoom(Math.exp(-event.deltaY * 0.0015));
+      }, { passive: false });
+      document.addEventListener("keydown", event => {
+        if (event.altKey || event.ctrlKey || event.metaKey) return;
+        if (event.code === "PageDown") {
+          event.preventDefault();
+          changeZoom(0.72);
+        } else if (event.code === "PageUp") {
+          event.preventDefault();
+          changeZoom(1.39);
+        }
+      });
       start();
     })();
   </script>
 </body>
 </html>
-
-
 
