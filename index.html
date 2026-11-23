@@ -94,3 +94,84 @@
   <canvas id="matrix-rain" aria-hidden="true"></canvas>
   <main>
     <p class="eyebrow">A little corner of the internet</p>
+    <h1>Hello!</h1>
+    <p class="message">Welcome to my website.</p>
+  </main>
+  <script>
+    (() => {
+      const canvas = document.getElementById("matrix-rain");
+      const context = canvas.getContext("2d");
+      if (!context) return;
+
+      const symbols = "アカサタナハマヤラワ012345789ABCDEFGHIJKLMNOPQRSTUVWXYZ$+-*/=%<>";
+      const fontSize = 17;
+      const reducedMotion = window.matchMedia("(prefers-reduced-motion: reduce)");
+      let columns = [];
+      let width = 0;
+      let height = 0;
+      let frameId;
+
+      function resize() {
+        const ratio = Math.min(window.devicePixelRatio || 1, 2);
+        width = window.innerWidth;
+        height = window.innerHeight;
+        canvas.width = Math.floor(width * ratio);
+        canvas.height = Math.floor(height * ratio);
+        context.setTransform(ratio, 0, 0, ratio, 0, 0);
+        columns = Array.from({ length: Math.ceil(width / fontSize) }, () => ({
+          y: Math.random() * (height / fontSize),
+          speed: 0.35 + Math.random() * 0.8
+        }));
+        context.fillStyle = "#050609";
+        context.fillRect(0, 0, width, height);
+        if (reducedMotion.matches) drawStill();
+      }
+
+      function drawSymbol(column, y, alpha = 0.8) {
+        const symbol = symbols[Math.floor(Math.random() * symbols.length)];
+        const hue = Math.floor(Math.random() * 360);
+        context.fillStyle = `hsla(${hue}, 92%, 68%, ${alpha})`;
+        context.fillText(symbol, column * fontSize, y * fontSize);
+      }
+
+      function drawStill() {
+        context.font = `${fontSize}px monospace`;
+        for (let column = 0; column < columns.length; column += 1) {
+          const count = 4 + Math.floor(Math.random() * 8);
+          const start = Math.floor(Math.random() * Math.max(1, height / fontSize));
+          for (let trail = 0; trail < count; trail += 1) {
+            drawSymbol(column, start - trail, 0.22 + (1 - trail / count) * 0.48);
+          }
+        }
+      }
+
+      function animate() {
+        context.fillStyle = "rgba(5, 6, 9, 0.12)";
+        context.fillRect(0, 0, width, height);
+        context.font = `${fontSize}px monospace`;
+
+        for (let column = 0; column < columns.length; column += 1) {
+          const drop = columns[column];
+          drawSymbol(column, drop.y, 0.78);
+          drop.y += drop.speed;
+          if (drop.y * fontSize > height && Math.random() > 0.975) {
+            drop.y = -Math.random() * 20;
+            drop.speed = 0.35 + Math.random() * 0.8;
+          }
+        }
+        frameId = window.requestAnimationFrame(animate);
+      }
+
+      function start() {
+        if (frameId) window.cancelAnimationFrame(frameId);
+        resize();
+        if (!reducedMotion.matches) frameId = window.requestAnimationFrame(animate);
+      }
+
+      window.addEventListener("resize", start, { passive: true });
+      reducedMotion.addEventListener?.("change", start);
+      start();
+    })();
+  </script>
+</body>
+</html>
