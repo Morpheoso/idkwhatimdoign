@@ -3,10 +3,10 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <meta name="description" content="A warm welcome to my website.">
+  <meta name="description" content="Morpheoso's animated pipe screen saver and website menu.">
   <meta name="referrer" content="strict-origin-when-cross-origin">
   <meta name="theme-color" content="#050609">
-  <title>Welcome to My Website</title>
+  <title>Morpheoso</title>
   <style>
     :root {
       color-scheme: dark;
@@ -20,9 +20,8 @@
       min-height: 100vh;
       min-height: 100svh;
       margin: 0;
-      display: grid;
-      place-items: center;
-      padding: 24px;
+      display: block;
+      padding: 0;
       overflow: hidden;
       background: #050609;
       isolation: isolate;
@@ -30,10 +29,11 @@
     #pipe-saver {
       position: fixed;
       inset: 0;
-      z-index: -1;
+      z-index: 0;
       width: 100%;
       height: 100%;
-      pointer-events: none;
+      pointer-events: auto;
+      touch-action: pan-x pinch-zoom;
     }
     .top-menu {
       position: fixed;
@@ -118,72 +118,6 @@
       background: rgb(85 239 176 / 12%);
       color: #fff;
     }
-    main {
-      width: min(100%, 680px);
-      padding: clamp(32px, 8vw, 72px);
-      text-align: center;
-      background: rgb(8 10 18 / 76%);
-      border: 1px solid rgb(255 255 255 / 16%);
-      border-radius: 24px;
-      box-shadow: 0 18px 70px rgb(0 0 0 / 55%), 0 0 45px rgb(79 70 229 / 12%);
-      backdrop-filter: blur(8px);
-      -webkit-backdrop-filter: blur(8px);
-    }
-    .eyebrow {
-      margin: 0 0 16px;
-      color: #e5e7eb;
-      font-size: .8rem;
-      font-weight: 700;
-      letter-spacing: .16em;
-      text-transform: uppercase;
-    }
-    h1 {
-      display: inline-block;
-      margin: 0;
-      background: var(--hello-rainbow);
-      background-size: 300% 100%;
-      background-clip: text;
-      -webkit-background-clip: text;
-      color: transparent;
-      font-size: clamp(2.75rem, 10vw, 5.5rem);
-      font-weight: 800;
-      line-height: 1.05;
-      letter-spacing: -.055em;
-      animation: rainbow-shift 9s linear infinite;
-      filter: drop-shadow(0 0 18px rgb(185 112 255 / 20%));
-    }
-    .message {
-      margin: 22px 0 0;
-      background: linear-gradient(90deg, #ff9cba, #ffe58a, #9bffd6, #9be2ff, #d5a6ff, #ff9cba);
-      background-size: 250% 100%;
-      background-clip: text;
-      -webkit-background-clip: text;
-      color: transparent;
-      font-size: clamp(1.1rem, 3vw, 1.45rem);
-      font-weight: 600;
-      line-height: 1.6;
-      animation: rainbow-shift 12s linear infinite reverse;
-      filter: drop-shadow(0 1px 8px rgb(0 0 0 / 90%));
-    }
-    .visualizer-link {
-      display: inline-flex;
-      min-height: 42px;
-      align-items: center;
-      margin-top: 28px;
-      padding: 0 14px;
-      border: 1px solid rgb(85 239 176 / 60%);
-      border-radius: 4px;
-      background: rgb(7 13 11 / 88%);
-      color: #a6ffd9;
-      font-family: ui-monospace, SFMono-Regular, Consolas, monospace;
-      font-size: 13px;
-      text-decoration: none;
-      box-shadow: 0 0 16px rgb(85 239 176 / 10%);
-      transition: border-color 140ms ease, background-color 140ms ease, color 140ms ease;
-    }
-    .visualizer-link::before { content: ">"; margin-right: 9px; color: #55efb0; }
-    .visualizer-link:hover { border-color: #a6ffd9; background: rgb(85 239 176 / 12%); color: #fff; }
-    .visualizer-link:focus-visible { outline: 2px solid #a6ffd9; outline-offset: 3px; }
     @keyframes rainbow-shift {
       from { background-position: 0% 50%; }
       to { background-position: 300% 50%; }
@@ -193,10 +127,8 @@
       to { background-position: 0 0, 300% 50%; }
     }
     @media (prefers-reduced-motion: reduce) {
-      h1, .message { animation: none; }
       .menu-toggle, .menu-toggle span, .terminal-menu { animation: none; }
       .menu-toggle span, .terminal-menu a { transition: none; }
-      .visualizer-link { transition: none; }
     }
     @media (max-width: 480px) {
       .top-menu { top: 14px; right: 14px; }
@@ -222,11 +154,6 @@
       <a href="bigfoot-runner.html">Bigfoot Runner</a>
     </nav>
   </div>
-  <main>
-    <p class="eyebrow">A little corner of the internet</p>
-    <h1>Hello!</h1>
-    <p class="message">Welcome to my website.</p>
-  </main>
   <script>
     (() => {
       const menuArea = document.querySelector(".top-menu");
@@ -434,6 +361,25 @@
         event.preventDefault();
         changeZoom(Math.exp(-event.deltaY * 0.0015));
       }, { passive: false });
+      let activeTouchPointer = null;
+      let lastTouchY = 0;
+      canvas.addEventListener("pointerdown", event => {
+        if (event.pointerType !== "touch") return;
+        activeTouchPointer = event.pointerId;
+        lastTouchY = event.clientY;
+        canvas.setPointerCapture(event.pointerId);
+      });
+      canvas.addEventListener("pointermove", event => {
+        if (event.pointerType !== "touch" || event.pointerId !== activeTouchPointer) return;
+        const deltaY = event.clientY - lastTouchY;
+        lastTouchY = event.clientY;
+        if (Math.abs(deltaY) > 0.5) changeZoom(Math.exp(deltaY * 0.0018));
+      });
+      function endTouchZoom(event) {
+        if (event.pointerId === activeTouchPointer) activeTouchPointer = null;
+      }
+      canvas.addEventListener("pointerup", endTouchZoom);
+      canvas.addEventListener("pointercancel", endTouchZoom);
       document.addEventListener("keydown", event => {
         if (event.altKey || event.ctrlKey || event.metaKey) return;
         if (event.code === "PageDown") {
