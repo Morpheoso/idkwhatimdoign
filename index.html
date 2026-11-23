@@ -11,6 +11,7 @@
     :root {
       color-scheme: dark;
       font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      --hello-rainbow: linear-gradient(90deg, #ff5f6d, #ffca5c, #72f1b8, #58c7ff, #c084fc, #ff5fbd, #ff5f6d);
       background: #050609;
       color: #fff;
     }
@@ -48,10 +49,14 @@
       align-content: center;
       justify-items: center;
       gap: 5px;
-      border: 1px solid #55efb0;
+      border: 1px solid transparent;
       border-radius: 3px;
-      background: rgb(7 13 11 / 94%);
-      box-shadow: 0 0 14px rgb(85 239 176 / 24%);
+      background:
+        linear-gradient(rgb(7 13 11 / 94%), rgb(7 13 11 / 94%)) padding-box,
+        var(--hello-rainbow) border-box;
+      background-size: 100% 100%, 300% 100%;
+      animation: rainbow-border-shift 9s linear infinite;
+      box-shadow: 0 0 14px rgb(185 112 255 / 18%);
       cursor: pointer;
     }
     .menu-toggle span {
@@ -59,7 +64,9 @@
       width: 19px;
       height: 2px;
       border-radius: 2px;
-      background: #a6ffd9;
+      background: var(--hello-rainbow);
+      background-size: 300% 100%;
+      animation: rainbow-shift 9s linear infinite;
       transition: transform 160ms ease, opacity 160ms ease;
     }
     .menu-toggle[aria-expanded="true"] span:first-child {
@@ -80,10 +87,14 @@
       right: 0;
       width: 184px;
       padding: 6px;
-      border: 1px solid #55efb0;
+      border: 1px solid transparent;
       border-radius: 3px;
-      background: rgb(7 13 11 / 97%);
-      box-shadow: 0 0 20px rgb(85 239 176 / 22%), 0 14px 36px rgb(0 0 0 / 55%);
+      background:
+        linear-gradient(rgb(7 13 11 / 97%), rgb(7 13 11 / 97%)) padding-box,
+        var(--hello-rainbow) border-box;
+      background-size: 100% 100%, 300% 100%;
+      animation: rainbow-border-shift 9s linear infinite;
+      box-shadow: 0 0 20px rgb(185 112 255 / 16%), 0 14px 36px rgb(0 0 0 / 55%);
     }
     .terminal-menu[hidden] { display: none; }
     .terminal-menu a {
@@ -101,7 +112,7 @@
     .terminal-menu a::before {
       content: ">";
       margin-right: 9px;
-      color: #55efb0;
+      color: #a6ffd9;
     }
     .terminal-menu a:hover {
       background: rgb(85 239 176 / 12%);
@@ -129,7 +140,7 @@
     h1 {
       display: inline-block;
       margin: 0;
-      background: linear-gradient(90deg, #ff5f6d, #ffca5c, #72f1b8, #58c7ff, #c084fc, #ff5fbd, #ff5f6d);
+      background: var(--hello-rainbow);
       background-size: 300% 100%;
       background-clip: text;
       -webkit-background-clip: text;
@@ -158,8 +169,13 @@
       from { background-position: 0% 50%; }
       to { background-position: 300% 50%; }
     }
+    @keyframes rainbow-border-shift {
+      from { background-position: 0 0, 0% 50%; }
+      to { background-position: 0 0, 300% 50%; }
+    }
     @media (prefers-reduced-motion: reduce) {
       h1, .message { animation: none; }
+      .menu-toggle, .menu-toggle span, .terminal-menu { animation: none; }
       .menu-toggle span, .terminal-menu a { transition: none; }
     }
     @media (max-width: 480px) {
@@ -391,5 +407,6 @@
   </script>
 </body>
 </html>
+
 
 
