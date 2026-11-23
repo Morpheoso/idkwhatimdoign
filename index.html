@@ -165,6 +165,25 @@
       animation: rainbow-shift 12s linear infinite reverse;
       filter: drop-shadow(0 1px 8px rgb(0 0 0 / 90%));
     }
+    .visualizer-link {
+      display: inline-flex;
+      min-height: 42px;
+      align-items: center;
+      margin-top: 28px;
+      padding: 0 14px;
+      border: 1px solid rgb(85 239 176 / 60%);
+      border-radius: 4px;
+      background: rgb(7 13 11 / 88%);
+      color: #a6ffd9;
+      font-family: ui-monospace, SFMono-Regular, Consolas, monospace;
+      font-size: 13px;
+      text-decoration: none;
+      box-shadow: 0 0 16px rgb(85 239 176 / 10%);
+      transition: border-color 140ms ease, background-color 140ms ease, color 140ms ease;
+    }
+    .visualizer-link::before { content: ">"; margin-right: 9px; color: #55efb0; }
+    .visualizer-link:hover { border-color: #a6ffd9; background: rgb(85 239 176 / 12%); color: #fff; }
+    .visualizer-link:focus-visible { outline: 2px solid #a6ffd9; outline-offset: 3px; }
     @keyframes rainbow-shift {
       from { background-position: 0% 50%; }
       to { background-position: 300% 50%; }
@@ -177,6 +196,7 @@
       h1, .message { animation: none; }
       .menu-toggle, .menu-toggle span, .terminal-menu { animation: none; }
       .menu-toggle span, .terminal-menu a { transition: none; }
+      .visualizer-link { transition: none; }
     }
     @media (max-width: 480px) {
       .top-menu { top: 14px; right: 14px; }
@@ -199,7 +219,7 @@
     <nav class="terminal-menu" id="site-menu" aria-label="Main navigation" hidden>
       <a href="#weather">Weather</a>
       <a href="#base">Base</a>
-      <a href="#roni">Roni</a>
+      <a href="audio-visualizer.html">Roni</a>
     </nav>
   </div>
   <main>
@@ -429,4 +449,3 @@
   </script>
 </body>
 </html>
-
