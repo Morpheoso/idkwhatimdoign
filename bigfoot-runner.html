@@ -1,0 +1,414 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="referrer" content="strict-origin-when-cross-origin">
+  <meta name="theme-color" content="#07101b">
+  <title>Bigfoot Runner | Morpheoso</title>
+  <style>
+    :root {
+      color-scheme: dark;
+      font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      color: #f5f3e8;
+      background: #05070b;
+      --cyan: #63c7e2;
+      --gold: #ffd84d;
+      --ink: #050a13;
+      --panel: rgb(5 10 19 / 91%);
+    }
+    * { box-sizing: border-box; }
+    body { min-height: 100vh; margin: 0; background: radial-gradient(ellipse at 50% 0%, #122641, #05070b 68%); }
+    button, a { font: inherit; }
+    .page { width: min(1040px, calc(100% - 28px)); margin: 0 auto; padding: 22px 0 34px; }
+    .topline { display: flex; align-items: center; justify-content: space-between; gap: 14px; margin-bottom: 20px; }
+    .brand { color: var(--gold); font: 700 13px ui-monospace, SFMono-Regular, Consolas, monospace; letter-spacing: .16em; text-transform: uppercase; }
+    .home-link, .game-button {
+      min-height: 42px;
+      display: inline-flex;
+      justify-content: center;
+      align-items: center;
+      padding: 0 16px;
+      color: #f5f3e8;
+      border: 1px solid rgb(99 199 226 / 60%);
+      border-radius: 5px;
+      background: rgb(7 21 38 / 88%);
+      text-decoration: none;
+      cursor: pointer;
+      transition: background-color 140ms ease, transform 140ms ease;
+    }
+    .home-link:hover, .game-button:hover { background: rgb(18 50 77 / 92%); }
+    .game-button:active { transform: translateY(1px); }
+    .home-link:focus-visible, .game-button:focus-visible { outline: 2px solid var(--gold); outline-offset: 3px; }
+    h1 { margin: 0; text-align: center; font-size: clamp(27px, 5vw, 43px); letter-spacing: .04em; text-shadow: 0 3px 0 #07101b, 0 0 20px rgb(99 199 226 / 38%); }
+    .subtitle { margin: 7px 0 19px; color: #bdd1dc; text-align: center; font: 12px ui-monospace, SFMono-Regular, Consolas, monospace; letter-spacing: .12em; }
+    .game-shell { overflow: hidden; border: 1px solid rgb(99 199 226 / 55%); border-radius: 10px; background: #07101b; box-shadow: 0 18px 65px rgb(0 0 0 / 55%), 0 0 24px rgb(40 139 186 / 14%); }
+    .hud { display: flex; justify-content: space-between; align-items: center; gap: 12px; padding: 11px 16px; border-bottom: 1px solid rgb(99 199 226 / 27%); background: #070d16; color: #b7dce5; font: 12px ui-monospace, SFMono-Regular, Consolas, monospace; letter-spacing: .08em; text-transform: uppercase; }
+    .score-line { display: flex; gap: 22px; }
+    .score-line strong { color: var(--gold); font-weight: 600; }
+    .canvas-wrap { position: relative; width: 100%; height: min(59vw, 470px); min-height: 300px; overflow: hidden; background: #1688bd; touch-action: manipulation; }
+    canvas { display: block; width: 100%; height: 100%; }
+    .overlay { position: absolute; inset: 0; display: grid; place-items: center; padding: 18px; background: rgb(3 8 15 / 28%); text-align: center; }
+    .overlay[hidden] { display: none; }
+    .message-card { width: min(430px, 100%); padding: 22px clamp(17px, 4vw, 34px); border: 1px solid rgb(99 199 226 / 58%); border-radius: 8px; background: var(--panel); box-shadow: 0 14px 46px rgb(0 0 0 / 54%); }
+    .message-card h2 { margin: 0 0 8px; color: var(--gold); font-size: clamp(22px, 4vw, 31px); letter-spacing: .08em; text-transform: uppercase; }
+    .message-card p { margin: 0 0 16px; color: #d7e5e9; line-height: 1.5; }
+    .gameover-card { position: relative; width: min(470px, 100%); padding-top: 104px; border-color: rgb(255 216 77 / 88%); box-shadow: 0 0 0 1px rgb(255 216 77 / 24%), 0 14px 54px rgb(0 0 0 / 68%), 0 0 32px rgb(255 216 77 / 23%); }
+    .flick { position: absolute; top: -126px; left: 50%; display: grid; place-items: center; width: 210px; aspect-ratio: 1; border-radius: 50%; background: radial-gradient(circle, rgb(255 216 77 / 38%), rgb(255 216 77 / 12%) 50%, transparent 72%); font-size: clamp(142px, 26vw, 205px); line-height: 1; transform: translateX(-50%) scale(.08) rotate(-35deg); filter: drop-shadow(0 0 14px rgb(255 216 77 / 72%)) drop-shadow(0 8px 4px rgb(0 0 0 / 65%)); animation: flick-pop 760ms cubic-bezier(.14, 1.7, .3, 1) forwards; }
+    @keyframes flick-pop { 0% { transform: translateX(-50%) scale(.08) rotate(-35deg); } 62% { transform: translateX(-50%) scale(1.17) rotate(13deg); } 78% { transform: translateX(-50%) scale(.94) rotate(-7deg); } 100% { transform: translateX(-50%) scale(1) rotate(0); } }
+    .controls { display: flex; justify-content: center; align-items: center; flex-wrap: wrap; gap: 10px; padding: 14px; border-top: 1px solid rgb(99 199 226 / 27%); background: #070d16; }
+    .hint { color: #94abb8; text-align: center; font-size: 12px; }
+    .footnote { margin: 13px 0 0; color: #8296a2; text-align: center; font: 11px ui-monospace, SFMono-Regular, Consolas, monospace; }
+    @media (max-width: 520px) {
+      .page { width: calc(100% - 18px); padding-top: 13px; }
+      .canvas-wrap { height: 64vw; min-height: 260px; max-height: 380px; }
+      .hud { padding: 10px; font-size: 10px; }
+      .score-line { gap: 10px; }
+      .flick { top: -108px; width: 180px; font-size: 150px; }
+      .gameover-card { padding-top: 92px; }
+    }
+    @media (prefers-reduced-motion: reduce) { *, *::before, *::after { scroll-behavior: auto !important; animation-duration: .01ms !important; animation-iteration-count: 1 !important; transition-duration: .01ms !important; } }
+  </style>
+</head>
+<body>
+  <main class="page">
+    <div class="topline"><a class="home-link" href="index.html">&lt; HOME</a><div class="brand">MORPHEOSO ARCADE</div></div>
+    <header><h1>BIGFOOT RUNNER</h1><p class="subtitle">CITY IN THE CLOUDS · DON'T STOP MOVING</p></header>
+    <section class="game-shell" aria-label="Bigfoot endless runner game">
+      <div class="hud"><span>URBAN ESCAPE</span><div class="score-line"><span>Score <strong id="score">00000</strong></span><span>Best <strong id="best">00000</strong></span></div></div>
+      <div class="canvas-wrap" id="canvas-wrap">
+        <canvas id="game" aria-label="Bigfoot runs through a comic-style city. Jump over obstacles to keep going."></canvas>
+        <div class="overlay" id="start-overlay">
+          <div class="message-card"><h2>Bigfoot is loose!</h2><p>Jump over the city obstacles and see how far you can run.</p><button class="game-button" id="start-button" type="button">START RUNNING</button></div>
+        </div>
+        <div class="overlay" id="gameover-overlay" hidden>
+          <div class="message-card gameover-card"><span class="flick" aria-hidden="true">🖕</span><h2>Run ended</h2><p>Bigfoot has one last thing to say.</p><button class="game-button" id="restart-button" type="button">RUN IT BACK</button></div>
+        </div>
+      </div>
+      <div class="controls"><button class="game-button" id="jump-button" type="button">JUMP</button><span class="hint">Press SPACE / ↑ or tap JUMP to leap over barriers.</span></div>
+    </section>
+    <p class="footnote">A / DINO-STYLE ENDLESS RUNNER · BUILT FOR THIS CITY</p>
+  </main>
+  <script>
+    (() => {
+      const canvas = document.getElementById("game");
+      const ctx = canvas.getContext("2d");
+      const wrap = document.getElementById("canvas-wrap");
+      const startOverlay = document.getElementById("start-overlay");
+      const gameoverOverlay = document.getElementById("gameover-overlay");
+      const startButton = document.getElementById("start-button");
+      const restartButton = document.getElementById("restart-button");
+      const jumpButton = document.getElementById("jump-button");
+      const scoreElement = document.getElementById("score");
+      const bestElement = document.getElementById("best");
+      const reducedMotion = window.matchMedia("(prefers-reduced-motion: reduce)");
+      let width = 0;
+      let height = 0;
+      let ground = 0;
+      let dpr = 1;
+      let state = "ready";
+      let lastTime = 0;
+      let elapsed = 0;
+      let distance = 0;
+      let score = 0;
+      let speed = 405;
+      let spawnTimer = 0;
+      let cityOffset = 0;
+      let cloudOffset = 0;
+      let raf = 0;
+      let best = 0;
+      let shownScore = -1;
+      let obstacles = [];
+      const player = { x: 100, y: 0, w: 54, h: 74, vy: 0, grounded: true, runTime: 0 };
+      const gravity = 1860;
+      const jumpPower = -735;
+
+      try { best = Number(localStorage.getItem("bigfoot-runner-best") || 0); } catch { best = 0; }
+      bestElement.textContent = String(best).padStart(5, "0");
+
+      function randomBetween(min, max) { return min + Math.random() * (max - min); }
+
+      function resize() {
+        const rect = wrap.getBoundingClientRect();
+        if (!rect.width || !rect.height) return;
+        dpr = Math.min(window.devicePixelRatio || 1, 2);
+        width = rect.width;
+        height = rect.height;
+        canvas.width = Math.round(width * dpr);
+        canvas.height = Math.round(height * dpr);
+        ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+        ground = height - Math.max(34, height * .12);
+        player.x = Math.max(45, width * .145);
+        player.y = ground - player.h;
+        draw();
+      }
+
+      function drawCloud(x, y, size) {
+        ctx.beginPath();
+        ctx.moveTo(x - size * 1.15, y + size * .24);
+        ctx.bezierCurveTo(x - size * 1.42, y - size * .08, x - size * 1.12, y - size * .55, x - size * .64, y - size * .48);
+        ctx.bezierCurveTo(x - size * .49, y - size * 1.06, x + size * .28, y - size * 1.03, x + size * .43, y - size * .5);
+        ctx.bezierCurveTo(x + size * .96, y - size * .7, x + size * 1.32, y - size * .28, x + size * 1.08, y + size * .1);
+        ctx.bezierCurveTo(x + size * .94, y + size * .49, x - size * .73, y + size * .48, x - size * 1.15, y + size * .24);
+        ctx.closePath();
+        ctx.fillStyle = "#fff9e8";
+        ctx.fill();
+        ctx.strokeStyle = "#050a13";
+        ctx.lineWidth = Math.max(2, size * .1);
+        ctx.lineJoin = "round";
+        ctx.stroke();
+        ctx.beginPath();
+        ctx.moveTo(x - size * .72, y + size * .18);
+        ctx.bezierCurveTo(x - size * .2, y + size * .42, x + size * .35, y + size * .36, x + size * .79, y + size * .15);
+        ctx.strokeStyle = "#65bfe0";
+        ctx.lineWidth = Math.max(1.5, size * .06);
+        ctx.lineCap = "round";
+        ctx.stroke();
+      }
+
+      function drawCity() {
+        const layerWidth = Math.max(32, width / 24);
+        const count = Math.ceil(width / layerWidth) + 1;
+        const parallax = cityOffset % layerWidth;
+        for (let index = -1; index < count; index += 1) {
+          const building = ((index % 9) + 9) % 9;
+          const x = index * layerWidth - parallax;
+          const w = layerWidth * (.83 + (building % 3) * .05);
+          const h = height * (.14 + ((building * 7 + 3) % 7) * .018);
+          const top = ground - h + 8;
+          ctx.fillStyle = building % 2 ? "#101b2b" : "#0a1423";
+          ctx.fillRect(x, top, w, h);
+          ctx.strokeStyle = "#03070e";
+          ctx.lineWidth = 3;
+          ctx.strokeRect(x, top, w, h);
+          if (building % 4 === 1) {
+            ctx.fillStyle = "#101b2b";
+            ctx.fillRect(x + w * .33, top - 9, w * .34, 10);
+            ctx.fillRect(x + w * .48, top - 22, w * .06, 14);
+          }
+          const columns = Math.max(2, Math.floor(w / 12));
+          const rows = Math.floor(h / 14);
+          for (let row = 0; row < rows; row += 1) {
+            for (let col = 0; col < columns; col += 1) {
+              if ((building * 5 + row * 3 + col * 7) % 5 < 3) {
+                ctx.fillStyle = (building + row + col) % 4 === 0 ? "#63c7e2" : "#ffd84d";
+                ctx.fillRect(x + 5 + col * 12, top + 7 + row * 14, 5, 7);
+              }
+            }
+          }
+        }
+      }
+
+      function drawBackground(now) {
+        const sky = ctx.createLinearGradient(0, 0, 0, height);
+        sky.addColorStop(0, "#38bde2");
+        sky.addColorStop(.5, "#1688bd");
+        sky.addColorStop(1, "#102b50");
+        ctx.fillStyle = sky;
+        ctx.fillRect(0, 0, width, height);
+        ctx.fillStyle = "rgb(3 24 46 / 15%)";
+        for (let y = 13; y < height * .58; y += 26) {
+          for (let x = 12; x < width; x += 26) {
+            ctx.beginPath(); ctx.arc(x, y, 1, 0, Math.PI * 2); ctx.fill();
+          }
+        }
+        const sunRadius = Math.min(width, height) * .087;
+        ctx.beginPath(); ctx.arc(width * .82, height * .2, sunRadius, 0, Math.PI * 2);
+        ctx.fillStyle = "#ffd84d"; ctx.shadowColor = "rgb(255 216 77 / 42%)"; ctx.shadowBlur = 18; ctx.fill(); ctx.shadowBlur = 0;
+        ctx.strokeStyle = "#070b13"; ctx.lineWidth = 4; ctx.stroke();
+        const drift = (cloudOffset % (width + 140)) - 80;
+        drawCloud(drift, height * .26, Math.min(37, height * .085));
+        drawCloud((drift + width * .54) % (width + 150), height * .39, Math.min(29, height * .07));
+        drawCloud((drift + width * .92) % (width + 150), height * .23, Math.min(43, height * .09));
+        drawCity();
+        const groundGradient = ctx.createLinearGradient(0, ground, 0, height);
+        groundGradient.addColorStop(0, "#14243a"); groundGradient.addColorStop(1, "#07101b");
+        ctx.fillStyle = groundGradient; ctx.fillRect(0, ground, width, height - ground);
+        ctx.strokeStyle = "#050a13"; ctx.lineWidth = 5; ctx.beginPath(); ctx.moveTo(0, ground); ctx.lineTo(width, ground); ctx.stroke();
+        ctx.strokeStyle = "rgb(99 199 226 / 55%)"; ctx.lineWidth = 2; ctx.beginPath(); ctx.moveTo(0, ground + 4); ctx.lineTo(width, ground + 4); ctx.stroke();
+        ctx.fillStyle = "rgb(255 216 77 / 65%)";
+        const dashOffset = (distance * .8) % 72;
+        for (let x = -dashOffset; x < width; x += 72) ctx.fillRect(x, ground + 20, 32, 3);
+      }
+
+      function drawBigfoot(now) {
+        const footY = player.y + player.h;
+        const cycle = player.grounded ? Math.sin(player.runTime * 17) : 0;
+        const stride = cycle * 8;
+        const x = player.x;
+        const y = player.y;
+        ctx.save();
+        ctx.translate(x, y);
+        ctx.shadowColor = "rgb(3 7 12 / 40%)"; ctx.shadowBlur = 10; ctx.shadowOffsetY = 4;
+        // Broad, furry body and head.
+        ctx.fillStyle = "#24180f";
+        ctx.beginPath();
+        ctx.moveTo(13, 28); ctx.quadraticCurveTo(2, 40, 9, 60); ctx.lineTo(14, 67);
+        ctx.quadraticCurveTo(25, 73, 40, 67); ctx.lineTo(47, 58); ctx.lineTo(44, 38);
+        ctx.quadraticCurveTo(42, 23, 31, 19); ctx.closePath(); ctx.fill();
+        ctx.shadowColor = "transparent"; ctx.shadowBlur = 0; ctx.shadowOffsetY = 0;
+        ctx.fillStyle = "#392519";
+        ctx.beginPath(); ctx.ellipse(29, 25, 19, 17, -.13, 0, Math.PI * 2); ctx.fill();
+        // Tufts of fur, ears and muzzle.
+        ctx.beginPath(); ctx.moveTo(14, 19); ctx.lineTo(7, 11); ctx.lineTo(17, 14); ctx.lineTo(19, 6); ctx.lineTo(25, 13); ctx.lineTo(31, 5); ctx.lineTo(35, 14); ctx.lineTo(44, 11); ctx.lineTo(39, 21); ctx.closePath(); ctx.fill();
+        ctx.fillStyle = "#503626";
+        ctx.beginPath(); ctx.ellipse(30, 31, 12, 8, 0, 0, Math.PI * 2); ctx.fill();
+        ctx.fillStyle = "#0b0908"; ctx.beginPath(); ctx.ellipse(34, 30, 4, 3, 0, 0, Math.PI * 2); ctx.fill();
+        ctx.fillStyle = "#f5d479"; ctx.beginPath(); ctx.arc(25, 22, 1.8, 0, Math.PI * 2); ctx.fill();
+        ctx.beginPath(); ctx.arc(36, 22, 1.8, 0, Math.PI * 2); ctx.fill();
+        // Swinging arms.
+        ctx.strokeStyle = "#392519"; ctx.lineWidth = 9; ctx.lineCap = "round";
+        ctx.beginPath(); ctx.moveTo(15, 34); ctx.lineTo(5, 44 + cycle * 5); ctx.stroke();
+        ctx.beginPath(); ctx.moveTo(41, 34); ctx.lineTo(49, 43 - cycle * 5); ctx.stroke();
+        // Running legs with large feet.
+        ctx.strokeStyle = "#24180f"; ctx.lineWidth = 11;
+        ctx.beginPath(); ctx.moveTo(20, 58); ctx.lineTo(18 + stride, 68); ctx.lineTo(10 + stride, 69); ctx.stroke();
+        ctx.beginPath(); ctx.moveTo(35, 58); ctx.lineTo(37 - stride, 68); ctx.lineTo(46 - stride, 69); ctx.stroke();
+        ctx.fillStyle = "#17100d";
+        ctx.beginPath(); ctx.ellipse(9 + stride, 70, 10, 4, -.12, 0, Math.PI * 2); ctx.fill();
+        ctx.beginPath(); ctx.ellipse(47 - stride, 70, 10, 4, .12, 0, Math.PI * 2); ctx.fill();
+        // Fur edge highlights keep the silhouette readable against the city.
+        ctx.strokeStyle = "rgb(255 216 77 / 48%)"; ctx.lineWidth = 1.2;
+        ctx.beginPath(); ctx.moveTo(12, 44); ctx.lineTo(10, 49); ctx.moveTo(44, 45); ctx.lineTo(47, 49); ctx.moveTo(19, 62); ctx.lineTo(16, 66); ctx.stroke();
+        ctx.restore();
+        ctx.fillStyle = "rgb(0 0 0 / 28%)";
+        ctx.beginPath(); ctx.ellipse(x + player.w * .52, footY + 3, 27, 5, 0, 0, Math.PI * 2); ctx.fill();
+      }
+
+      function drawObstacle(obstacle) {
+        const x = obstacle.x;
+        const y = ground - obstacle.h;
+        ctx.save();
+        ctx.shadowColor = "rgb(255 216 77 / 72%)"; ctx.shadowBlur = 13;
+        if (obstacle.type === "barrier") {
+          ctx.fillStyle = "#f3bf31"; ctx.strokeStyle = "#06101c"; ctx.lineWidth = 5;
+          ctx.beginPath(); ctx.moveTo(x + 4, y + 12); ctx.lineTo(x + obstacle.w - 4, y + 12); ctx.lineTo(x + obstacle.w, y + obstacle.h); ctx.lineTo(x, y + obstacle.h); ctx.closePath(); ctx.fill(); ctx.stroke();
+          ctx.shadowBlur = 0;
+          ctx.save(); ctx.beginPath(); ctx.rect(x + 4, y + 18, obstacle.w - 8, obstacle.h - 23); ctx.clip();
+          ctx.fillStyle = "#10253a"; ctx.fillRect(x + 4, y + 18, obstacle.w - 8, obstacle.h - 23);
+          ctx.strokeStyle = "#fff2ad"; ctx.lineWidth = 10;
+          for (let stripe = -obstacle.h; stripe < obstacle.w + obstacle.h; stripe += 24) {
+            ctx.beginPath(); ctx.moveTo(x + stripe, y + obstacle.h); ctx.lineTo(x + stripe + obstacle.h, y + 14); ctx.stroke();
+          }
+          ctx.restore();
+          ctx.shadowBlur = 8; ctx.shadowColor = "#63c7e2";
+          ctx.fillStyle = "#63c7e2"; ctx.fillRect(x - 5, ground - 8, obstacle.w + 10, 8);
+          ctx.shadowBlur = 0;
+          ctx.fillStyle = "#07101b"; ctx.font = "bold 10px ui-monospace, monospace"; ctx.textAlign = "center";
+          ctx.fillText("JUMP", x + obstacle.w / 2, y + 15);
+        } else {
+          ctx.fillStyle = "#e35443"; ctx.strokeStyle = "#07101b"; ctx.lineWidth = 5;
+          ctx.beginPath(); ctx.moveTo(x + obstacle.w * .18, ground); ctx.lineTo(x + obstacle.w * .31, y + 9); ctx.quadraticCurveTo(x + obstacle.w * .5, y - 1, x + obstacle.w * .69, y + 9); ctx.lineTo(x + obstacle.w * .84, ground); ctx.closePath(); ctx.fill(); ctx.stroke();
+          ctx.shadowBlur = 0;
+          ctx.fillStyle = "#ffd84d"; ctx.beginPath(); ctx.ellipse(x + obstacle.w * .5, y + 11, 6, 5, 0, 0, Math.PI * 2); ctx.fill();
+          ctx.fillStyle = "#fff2ad"; ctx.fillRect(x + obstacle.w * .25, ground - 8, obstacle.w * .5, 6);
+        }
+        ctx.shadowBlur = 0;
+        ctx.restore();
+      }
+
+      function draw(now = 0) {
+        if (!width || !height) return;
+        drawBackground(now);
+        for (const obstacle of obstacles) drawObstacle(obstacle);
+        drawBigfoot(now);
+      }
+
+      function update(dt) {
+        const seconds = dt / 1000;
+        elapsed += seconds;
+        speed = Math.min(810, 405 + elapsed * 11);
+        distance += speed * seconds;
+        cityOffset += speed * seconds * .14;
+        cloudOffset += speed * seconds * .035;
+        player.runTime += seconds;
+        player.vy += gravity * seconds;
+        player.y += player.vy * seconds;
+        if (player.y >= ground - player.h) {
+          player.y = ground - player.h;
+          player.vy = 0;
+          player.grounded = true;
+        }
+        spawnTimer -= seconds;
+        if (spawnTimer <= 0) {
+          const tall = Math.random() < .56;
+          obstacles.push({
+            type: tall ? "barrier" : "hydrant",
+            x: width + 20,
+            w: tall ? randomBetween(34, 49) : 40,
+            h: tall ? randomBetween(48, 68) : 48
+          });
+          spawnTimer = randomBetween(.94, 1.48) * Math.max(.68, 405 / speed);
+        }
+        for (const obstacle of obstacles) obstacle.x -= speed * seconds;
+        obstacles = obstacles.filter(obstacle => obstacle.x + obstacle.w > -10);
+        score = Math.floor(distance / 10);
+        if (score !== shownScore) {
+          scoreElement.textContent = String(score).padStart(5, "0");
+          shownScore = score;
+        }
+
+        const hitbox = { x: player.x + 9, y: player.y + 10, w: player.w - 18, h: player.h - 13 };
+        for (const obstacle of obstacles) {
+          const box = { x: obstacle.x + 3, y: ground - obstacle.h + 3, w: obstacle.w - 6, h: obstacle.h - 3 };
+          if (hitbox.x < box.x + box.w && hitbox.x + hitbox.w > box.x && hitbox.y < box.y + box.h && hitbox.y + hitbox.h > box.y) {
+            finishRun();
+            break;
+          }
+        }
+      }
+
+      function animate(now) {
+        const dt = Math.min(40, lastTime ? now - lastTime : 16);
+        lastTime = now;
+        if (state === "running") update(dt);
+        draw(now);
+        raf = window.requestAnimationFrame(animate);
+      }
+
+      function beginRun() {
+        if (raf) window.cancelAnimationFrame(raf);
+        state = "running";
+        lastTime = 0; elapsed = 0; distance = 0; score = 0; speed = 405; spawnTimer = .75; obstacles = [];
+        shownScore = -1;
+        player.vy = 0; player.grounded = true; player.runTime = 0; player.y = ground - player.h;
+        scoreElement.textContent = "00000";
+        startOverlay.hidden = true;
+        gameoverOverlay.hidden = true;
+        raf = window.requestAnimationFrame(animate);
+      }
+
+      function finishRun() {
+        if (state !== "running") return;
+        state = "over";
+        best = Math.max(best, score);
+        bestElement.textContent = String(best).padStart(5, "0");
+        try { localStorage.setItem("bigfoot-runner-best", String(best)); } catch { /* Local score saving is optional. */ }
+        gameoverOverlay.hidden = false;
+        restartButton.focus({ preventScroll: true });
+      }
+
+      function jump() {
+        if (state === "ready") { beginRun(); return; }
+        if (state === "over") return;
+        if (player.grounded) { player.vy = jumpPower; player.grounded = false; }
+      }
+
+      startButton.addEventListener("click", beginRun);
+      restartButton.addEventListener("click", beginRun);
+      jumpButton.addEventListener("click", jump);
+      canvas.addEventListener("pointerdown", event => { event.preventDefault(); jump(); });
+      window.addEventListener("keydown", event => {
+        if (event.altKey || event.ctrlKey || event.metaKey) return;
+        if (event.code === "Space" || event.code === "ArrowUp" || event.code === "KeyW") {
+          event.preventDefault();
+          jump();
+        }
+      });
+      window.addEventListener("resize", resize, { passive: true });
+      resize();
+      raf = window.requestAnimationFrame(animate);
+    })();
+  </script>
+</body>
+</html>
