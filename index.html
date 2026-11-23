@@ -26,7 +26,7 @@
       background: #050609;
       isolation: isolate;
     }
-    #matrix-rain {
+    #pipe-saver {
       position: fixed;
       inset: 0;
       z-index: -1;
@@ -91,7 +91,7 @@
   </style>
 </head>
 <body>
-  <canvas id="matrix-rain" aria-hidden="true"></canvas>
+  <canvas id="pipe-saver" aria-hidden="true"></canvas>
   <main>
     <p class="eyebrow">A little corner of the internet</p>
     <h1>Hello!</h1>
@@ -99,65 +99,160 @@
   </main>
   <script>
     (() => {
-      const canvas = document.getElementById("matrix-rain");
+      const canvas = document.getElementById("pipe-saver");
       const context = canvas.getContext("2d");
       if (!context) return;
 
-      const symbols = "アカサタナハマヤラワ012345789ABCDEFGHIJKLMNOPQRSTUVWXYZ$+-*/=%<>";
-      const fontSize = 17;
       const reducedMotion = window.matchMedia("(prefers-reduced-motion: reduce)");
-      let columns = [];
+      const axes = [
+        { x: 1, y: 0, z: 0 }, { x: -1, y: 0, z: 0 },
+        { x: 0, y: 1, z: 0 }, { x: 0, y: -1, z: 0 },
+        { x: 0, y: 0, z: 1 }, { x: 0, y: 0, z: -1 }
+      ];
+      const colors = ["#ff5f6d", "#ffbf4a", "#ffe66d", "#69e6a6", "#51c7ff", "#9b8cff", "#ed78e8"];
+      const pipeCount = 14;
+      const puzzleDuration = 60_000;
+      let pipes = [];
       let width = 0;
       let height = 0;
+      let unit = 24;
+      let gridLimit = 8;
       let frameId;
+      let lastStep = 0;
+      let puzzleStarted = 0;
+
+      function project(point) {
+        return {
+          x: width / 2 + (point.x - point.y) * unit * 0.866,
+          y: height / 2 + (point.x + point.y) * unit * 0.5 - point.z * unit * 0.9
+        };
+      }
+
+      function isInside(point) {
+        return Math.abs(point.x) <= gridLimit && Math.abs(point.y) <= gridLimit && Math.abs(point.z) <= gridLimit;
+      }
+
+      function chooseDirection(point, previous) {
+        const valid = axes.filter(axis => isInside({ x: point.x + axis.x, y: point.y + axis.y, z: point.z + axis.z }));
+        const perpendicular = valid.filter(axis =>
+          axis.x * previous.x + axis.y * previous.y + axis.z * previous.z === 0
+        );
+        const choices = perpendicular.length ? perpendicular : valid;
+        return choices[Math.floor(Math.random() * choices.length)];
+      }
+
+      function newPipe(seed = false) {
+        const span = Math.max(3, gridLimit - 1);
+        const point = seed
+          ? { x: (Math.random() - 0.5) * span, y: (Math.random() - 0.5) * span, z: (Math.random() - 0.5) * span }
+          : { x: 0, y: 0, z: 0 };
+        const direction = axes[Math.floor(Math.random() * axes.length)];
+        const pipe = {
+          points: [point],
+          direction,
+          stepsLeft: 8 + Math.floor(Math.random() * 13),
+          hue: colors[Math.floor(Math.random() * colors.length)]
+        };
+        if (seed) {
+          for (let i = 0; i < 90; i += 1) stepPipe(pipe);
+        }
+        return pipe;
+      }
+
+      function stepPipe(pipe) {
+        if (pipe.stepsLeft <= 0) {
+          pipe.direction = chooseDirection(pipe.points[pipe.points.length - 1], pipe.direction);
+          pipe.stepsLeft = 8 + Math.floor(Math.random() * 13);
+        }
+        const last = pipe.points[pipe.points.length - 1];
+        let next = {
+          x: last.x + pipe.direction.x,
+          y: last.y + pipe.direction.y,
+          z: last.z + pipe.direction.z
+        };
+        if (!isInside(next)) {
+          pipe.direction = chooseDirection(last, pipe.direction);
+          pipe.stepsLeft = 8 + Math.floor(Math.random() * 13);
+          next = {
+            x: last.x + pipe.direction.x,
+            y: last.y + pipe.direction.y,
+            z: last.z + pipe.direction.z
+          };
+        }
+        pipe.points.push(next);
+        pipe.stepsLeft -= 1;
+      }
 
       function resize() {
         const ratio = Math.min(window.devicePixelRatio || 1, 2);
         width = window.innerWidth;
         height = window.innerHeight;
+        unit = Math.max(16, Math.min(30, Math.min(width / 34, height / 24)));
+        gridLimit = Math.max(4, Math.floor(Math.min(width / (3.8 * unit), height / (3.8 * unit))));
         canvas.width = Math.floor(width * ratio);
         canvas.height = Math.floor(height * ratio);
         context.setTransform(ratio, 0, 0, ratio, 0, 0);
-        columns = Array.from({ length: Math.ceil(width / fontSize) }, () => ({
-          y: Math.random() * (height / fontSize),
-          speed: 0.35 + Math.random() * 0.8
-        }));
-        context.fillStyle = "#050609";
-        context.fillRect(0, 0, width, height);
-        if (reducedMotion.matches) drawStill();
+        if (!pipes.length) {
+          pipes = Array.from({ length: pipeCount }, () => newPipe(true));
+          puzzleStarted = performance.now();
+        }
+        draw();
       }
 
-      function drawSymbol(column, y, alpha = 0.8) {
-        const symbol = symbols[Math.floor(Math.random() * symbols.length)];
-        const hue = Math.floor(Math.random() * 360);
-        context.fillStyle = `hsla(${hue}, 92%, 68%, ${alpha})`;
-        context.fillText(symbol, column * fontSize, y * fontSize);
-      }
+      function drawPipe(pipe) {
+        const points = pipe.points.map(project);
+        if (points.length < 2) return;
 
-      function drawStill() {
-        context.font = `${fontSize}px monospace`;
-        for (let column = 0; column < columns.length; column += 1) {
-          const count = 4 + Math.floor(Math.random() * 8);
-          const start = Math.floor(Math.random() * Math.max(1, height / fontSize));
-          for (let trail = 0; trail < count; trail += 1) {
-            drawSymbol(column, start - trail, 0.22 + (1 - trail / count) * 0.48);
-          }
+        context.beginPath();
+        context.moveTo(points[0].x, points[0].y);
+        for (let i = 1; i < points.length; i += 1) context.lineTo(points[i].x, points[i].y);
+        context.lineJoin = "round";
+        context.lineCap = "round";
+        context.strokeStyle = "#08090d";
+        context.lineWidth = 21;
+        context.stroke();
+        context.strokeStyle = pipe.hue;
+        context.lineWidth = 15;
+        context.shadowColor = pipe.hue;
+        context.shadowBlur = 12;
+        context.stroke();
+        context.shadowBlur = 0;
+
+        for (let i = 1; i < points.length; i += 1) {
+          const a = points[i - 1];
+          const b = points[i];
+          const dx = b.x - a.x;
+          const dy = b.y - a.y;
+          const length = Math.hypot(dx, dy) || 1;
+          const offsetX = (dy / length) * -3;
+          const offsetY = (dx / length) * 3;
+          context.beginPath();
+          context.moveTo(a.x + offsetX, a.y + offsetY);
+          context.lineTo(b.x + offsetX, b.y + offsetY);
+          context.strokeStyle = "rgb(255 255 255 / 42%)";
+          context.lineWidth = 2;
+          context.lineCap = "round";
+          context.stroke();
         }
       }
 
-      function animate() {
-        context.fillStyle = "rgba(5, 6, 9, 0.12)";
+      function draw() {
+        context.fillStyle = "#050609";
         context.fillRect(0, 0, width, height);
-        context.font = `${fontSize}px monospace`;
+        for (const pipe of pipes) drawPipe(pipe);
+      }
 
-        for (let column = 0; column < columns.length; column += 1) {
-          const drop = columns[column];
-          drawSymbol(column, drop.y, 0.78);
-          drop.y += drop.speed;
-          if (drop.y * fontSize > height && Math.random() > 0.975) {
-            drop.y = -Math.random() * 20;
-            drop.speed = 0.35 + Math.random() * 0.8;
+      function animate(now) {
+        if (now - lastStep > 115) {
+          if (now - puzzleStarted >= puzzleDuration) {
+            pipes = Array.from({ length: pipeCount }, () => newPipe(true));
+            puzzleStarted = now;
           }
+          for (const pipe of pipes) {
+            stepPipe(pipe);
+          }
+          lastStep = now;
+          draw();
         }
         frameId = window.requestAnimationFrame(animate);
       }
@@ -175,3 +270,4 @@
   </script>
 </body>
 </html>
+
