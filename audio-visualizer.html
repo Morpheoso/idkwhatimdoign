@@ -1,0 +1,934 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="description" content="A colorful audio visualizer for sound playing on your device.">
+  <meta name="referrer" content="strict-origin-when-cross-origin">
+  <meta name="theme-color" content="#07152a">
+  <title>Audio Visualizer</title>
+  <style>
+    :root {
+      color-scheme: dark;
+      font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      color: #fff9e8;
+      background: #07152a;
+    }
+    * { box-sizing: border-box; }
+    body {
+      min-height: 100vh;
+      min-height: 100svh;
+      margin: 0;
+      padding: 28px 20px 44px;
+      background:
+        radial-gradient(ellipse at 50% 5%, rgb(29 115 169 / 28%), transparent 52%),
+        radial-gradient(ellipse at 50% 100%, #030812, #07152a 72%);
+    }
+    #cover-art { position: fixed; inset: 0; z-index: 0; width: 100vw; height: 100vh; pointer-events: none; }
+    .page-shell { position: relative; z-index: 1; width: min(100%, 1040px); margin: 0 auto; }
+    .topline { display: flex; justify-content: space-between; align-items: center; margin-bottom: 28px; }
+    .back-link, .home-link {
+      color: #ffe16b;
+      font-family: ui-monospace, SFMono-Regular, Consolas, monospace;
+      font-size: 14px;
+      text-decoration: none;
+    }
+    .back-link:hover, .home-link:hover { color: #fff9e8; }
+    .back-link:focus-visible, .home-link:focus-visible, button:focus-visible {
+      outline: 2px solid #ffe16b;
+      outline-offset: 3px;
+    }
+    .brand {
+      color: #b9dff0;
+      font-size: 11px;
+      font-weight: 700;
+      letter-spacing: .18em;
+    }
+    header { text-align: center; margin: 0 auto 28px; }
+    h1 {
+      margin: 0;
+      color: #fff9e8;
+      font-size: clamp(2rem, 6vw, 3.5rem);
+      font-weight: 900;
+      letter-spacing: .025em;
+      line-height: 1.1;
+      text-transform: uppercase;
+      -webkit-text-stroke: 1.5px #070c16;
+      text-shadow: 3px 4px 0 #070c16, 5px 6px 0 #e5b936, 0 0 22px rgb(255 216 77 / 25%);
+    }
+    .intro { margin: 12px auto 0; max-width: 610px; color: #e2f4fb; line-height: 1.6; text-shadow: 1px 2px #07101d; }
+    .visualizer-panel {
+      padding: clamp(14px, 3vw, 24px);
+      border: 3px solid #030812;
+      border-radius: 6px;
+      background: rgb(11 26 48 / 88%);
+      box-shadow: 8px 10px 0 #030812, 0 0 32px rgb(23 116 166 / 18%);
+      backdrop-filter: blur(8px);
+      -webkit-backdrop-filter: blur(8px);
+    }
+    .mode-list {
+      display: flex;
+      flex-wrap: wrap;
+      justify-content: center;
+      gap: 8px;
+      margin-bottom: 16px;
+    }
+    .mode-button, .capture-button {
+      min-height: 42px;
+      padding: 9px 14px;
+      border: 2px solid #050b16;
+      border-radius: 4px;
+      background: #17456a;
+      color: #f5f4e9;
+      font: inherit;
+      font-size: 13px;
+      font-weight: 750;
+      text-shadow: 1px 1px #07101d;
+      cursor: pointer;
+    }
+    .mode-button:hover, .capture-button:hover:not(:disabled) { border-color: #ffe16b; background: #24658d; }
+    .mode-button[aria-pressed="true"] {
+      border-color: #050b16;
+      background: #ffd84d;
+      color: #101521;
+      text-shadow: none;
+      box-shadow: 3px 3px 0 #050b16;
+    }
+    .visualizer-stage {
+      position: relative;
+      min-height: 300px;
+      height: min(54vh, 470px);
+      overflow: hidden;
+      border: 3px solid #030812;
+      border-radius: 5px;
+      background: #050609;
+      box-shadow: inset 0 0 0 2px rgb(255 255 255 / 8%);
+    }
+    #visualizer-canvas { position: absolute; inset: 0; display: block; width: 100%; height: 100%; }
+    .stage-label {
+      position: absolute;
+      inset: auto 12px 10px;
+      color: #fff9e8;
+      padding: 4px 8px;
+      background: rgb(4 10 20 / 82%);
+      border: 1px solid #030812;
+      border-radius: 3px;
+      font-family: ui-monospace, SFMono-Regular, Consolas, monospace;
+      font-size: 11px;
+      letter-spacing: .08em;
+      text-align: center;
+      pointer-events: none;
+    }
+    .capture-row {
+      display: flex;
+      flex-wrap: wrap;
+      justify-content: center;
+      align-items: center;
+      gap: 12px;
+      margin: 18px 0 10px;
+    }
+    .capture-button.primary {
+      border-color: #030812;
+      background: #ffd84d;
+      color: #111521;
+      font-weight: 700;
+      text-shadow: none;
+      box-shadow: 3px 3px 0 #030812;
+    }
+    .capture-button:disabled { opacity: .5; cursor: not-allowed; }
+    .status { min-height: 24px; margin: 10px 0 0; color: #fff4d5; font-size: 13px; text-align: center; }
+    .status[data-state="error"] { color: #ff9b89; }
+    .instructions {
+      max-width: 760px;
+      margin: 18px auto 0;
+      color: #d0dbe7;
+      font-size: 13px;
+      line-height: 1.65;
+      text-align: center;
+    }
+    .privacy-note { color: #9db8c9; }
+    .sensitivity-control {
+      display: grid;
+      grid-template-columns: minmax(130px, 190px) minmax(120px, 1fr) auto;
+      align-items: center;
+      gap: 12px;
+      margin-top: 20px;
+      padding: 14px 16px;
+      border: 2px solid #030812;
+      border-radius: 4px;
+      background: #122944;
+      box-shadow: 3px 3px 0 #030812;
+    }
+    .sensitivity-control label {
+      color: #fff4d5;
+      font-size: 13px;
+      font-weight: 600;
+    }
+    .sensitivity-control output {
+      color: #ffe16b;
+      font-family: ui-monospace, SFMono-Regular, Consolas, monospace;
+      font-size: 13px;
+      text-align: right;
+    }
+    .sensitivity-control input {
+      width: 100%;
+      accent-color: #ffd84d;
+      cursor: pointer;
+    }
+    @media (max-width: 560px) {
+      body { padding: 18px 12px 32px; }
+      .topline { margin-bottom: 22px; }
+      .visualizer-stage { height: 48vh; min-height: 260px; }
+      .mode-list { gap: 6px; }
+      .mode-button { padding-inline: 10px; font-size: 12px; }
+      .sensitivity-control { grid-template-columns: 1fr auto; }
+      .sensitivity-control input { grid-column: 1 / -1; grid-row: 2; }
+    }
+  </style>
+</head>
+<body>
+  <canvas id="cover-art" aria-hidden="true"></canvas>
+  <div class="page-shell">
+    <div class="topline">
+      <a class="back-link" href="index.html">&lt; Home</a>
+      <span class="brand">CITY IN THE CLOUDS</span>
+    </div>
+
+    <header>
+      <h1>Audio Visualizer</h1>
+      <p class="intro">Big skies. Bright city lights. Let every note move the scene.</p>
+    </header>
+
+    <main class="visualizer-panel">
+      <div class="mode-list" role="group" aria-label="Choose a visualizer style">
+        <button class="mode-button" type="button" data-mode="bars" aria-pressed="true">Equalizer</button>
+        <button class="mode-button" type="button" data-mode="radial" aria-pressed="false">Circular Spectrum</button>
+        <button class="mode-button" type="button" data-mode="wave" aria-pressed="false">Waveform</button>
+        <button class="mode-button" type="button" data-mode="halo" aria-pressed="false">Pulse Halo</button>
+        <button class="mode-button" type="button" data-mode="particles" aria-pressed="false">Particle Burst</button>
+        <button class="mode-button" type="button" data-mode="invaders" aria-pressed="false">Space Invaders</button>
+      </div>
+
+      <div class="visualizer-stage">
+        <canvas id="visualizer-canvas" role="img" aria-label="Audio visualizer animation"></canvas>
+        <div class="stage-label" id="stage-label">EQUALIZER / WAITING FOR AUDIO</div>
+      </div>
+
+      <div class="capture-row">
+        <button class="capture-button primary" id="start-capture" type="button">Start system audio</button>
+        <button class="capture-button" id="stop-capture" type="button" disabled>Stop</button>
+      </div>
+      <p class="status" id="capture-status" role="status" aria-live="polite">Audio stays in this browser tab; nothing is recorded or uploaded.</p>
+      <p class="instructions">
+        When the browser asks what to share, choose your screen and enable <strong>Share system audio</strong> if offered. The page analyzes the audio locally and does not display or store your screen.
+        <br><span class="privacy-note">System-audio capture depends on your browser and operating system. If no audio is captured, try Chrome or Edge on Windows.</span>
+      </p>
+      <div class="sensitivity-control">
+        <label for="audio-sensitivity">Audio sensitivity</label>
+        <input id="audio-sensitivity" type="range" min="25" max="250" step="5" value="100" aria-describedby="sensitivity-value">
+        <output id="sensitivity-value" for="audio-sensitivity" aria-live="polite">100%</output>
+      </div>
+    </main>
+  </div>
+
+  <script>
+    (() => {
+      const canvas = document.getElementById("visualizer-canvas");
+      const context = canvas.getContext("2d");
+      const coverCanvas = document.getElementById("cover-art");
+      const coverContext = coverCanvas.getContext("2d");
+      const status = document.getElementById("capture-status");
+      const startButton = document.getElementById("start-capture");
+      const stopButton = document.getElementById("stop-capture");
+      const stageLabel = document.getElementById("stage-label");
+      const sensitivityInput = document.getElementById("audio-sensitivity");
+      const sensitivityValue = document.getElementById("sensitivity-value");
+      const modeButtons = [...document.querySelectorAll(".mode-button")];
+      const modes = {
+        bars: "EQUALIZER",
+        radial: "CIRCULAR SPECTRUM",
+        wave: "WAVEFORM",
+        halo: "PULSE HALO",
+        particles: "PARTICLE BURST",
+        invaders: "SPACE INVADERS"
+      };
+      let mode = "bars";
+      let width = 0;
+      let height = 0;
+      let coverWidth = 0;
+      let coverHeight = 0;
+      let audioContext = null;
+      let analyser = null;
+      let source = null;
+      let stream = null;
+      let frequencyData = null;
+      let waveformData = null;
+      let animationId = null;
+      let particles = [];
+      let stopping = false;
+      let sensitivity = 1;
+      const arcade = {
+        shipX: 0,
+        bullets: [],
+        sparks: [],
+        invaders: [],
+        lastShot: 0,
+        previousBands: { bass: 0, mid: 0, high: 0 },
+        shotIndex: 0,
+        score: 0,
+        fleetPhase: 0
+      };
+
+      const invaderSprite = [
+        "00100100",
+        "00011000",
+        "00111100",
+        "01111110",
+        "11011011",
+        "10111101",
+        "00100100",
+        "01011010"
+      ];
+
+      function resetArcade() {
+        const pixel = Math.max(3, Math.min(5, width / 210));
+        const columns = 10;
+        const rows = 3;
+        const spriteWidth = pixel * 8;
+        const spacing = pixel * 12;
+        const formationWidth = (columns - 1) * spacing + spriteWidth;
+        const left = (width - formationWidth) / 2;
+        arcade.shipX = width / 2;
+        arcade.bullets = [];
+        arcade.sparks = [];
+        arcade.invaders = [];
+        arcade.lastShot = 0;
+        arcade.previousBands = { bass: 0, mid: 0, high: 0 };
+        arcade.shotIndex = 0;
+        arcade.score = 0;
+        arcade.fleetPhase = Math.random() * Math.PI * 2;
+        for (let row = 0; row < rows; row += 1) {
+          for (let column = 0; column < columns; column += 1) {
+            arcade.invaders.push({
+              x: left + column * spacing,
+              y: 44 + row * pixel * 13,
+              pixel,
+              row,
+              column,
+              alive: true
+            });
+          }
+        }
+      }
+
+      function resizeCanvas() {
+        resizeCoverArt();
+        const ratio = Math.min(window.devicePixelRatio || 1, 2);
+        width = canvas.clientWidth;
+        height = canvas.clientHeight;
+        canvas.width = Math.floor(width * ratio);
+        canvas.height = Math.floor(height * ratio);
+        context.setTransform(ratio, 0, 0, ratio, 0, 0);
+        particles = Array.from({ length: 190 }, () => ({
+          angle: Math.random() * Math.PI * 2,
+          radius: Math.random(),
+          hue: Math.random() * 360,
+          size: 1 + Math.random() * 2.4
+        }));
+        resetArcade();
+        drawIdle();
+      }
+
+      function drawCloud(ctx, x, y, size) {
+        ctx.beginPath();
+        ctx.moveTo(x - size * 1.15, y + size * .24);
+        ctx.bezierCurveTo(x - size * 1.42, y - size * .08, x - size * 1.12, y - size * .55, x - size * .64, y - size * .48);
+        ctx.bezierCurveTo(x - size * .49, y - size * 1.06, x + size * .28, y - size * 1.03, x + size * .43, y - size * .5);
+        ctx.bezierCurveTo(x + size * .96, y - size * .7, x + size * 1.32, y - size * .28, x + size * 1.08, y + size * .1);
+        ctx.bezierCurveTo(x + size * .94, y + size * .49, x - size * .73, y + size * .48, x - size * 1.15, y + size * .24);
+        ctx.closePath();
+        ctx.fillStyle = "#fff9e8";
+        ctx.fill();
+        ctx.strokeStyle = "#050a13";
+        ctx.lineWidth = Math.max(3, size * .1);
+        ctx.lineJoin = "round";
+        ctx.stroke();
+        ctx.beginPath();
+        ctx.moveTo(x - size * .72, y + size * .18);
+        ctx.bezierCurveTo(x - size * .2, y + size * .42, x + size * .35, y + size * .36, x + size * .79, y + size * .15);
+        ctx.strokeStyle = "#65bfe0";
+        ctx.lineWidth = Math.max(2, size * .06);
+        ctx.lineCap = "round";
+        ctx.stroke();
+      }
+
+      function resizeCoverArt() {
+        if (!coverContext) return;
+        const ratio = Math.min(window.devicePixelRatio || 1, 2);
+        coverWidth = window.innerWidth;
+        coverHeight = window.innerHeight;
+        coverCanvas.width = Math.floor(coverWidth * ratio);
+        coverCanvas.height = Math.floor(coverHeight * ratio);
+        coverContext.setTransform(ratio, 0, 0, ratio, 0, 0);
+        drawBackdrop(coverContext, coverWidth, coverHeight);
+      }
+
+      function drawBackdrop(ctx, artWidth, artHeight) {
+        const sky = ctx.createLinearGradient(0, 0, 0, artHeight);
+        sky.addColorStop(0, "#38bde2");
+        sky.addColorStop(.48, "#1688bd");
+        sky.addColorStop(1, "#102b50");
+        ctx.fillStyle = sky;
+        ctx.fillRect(0, 0, artWidth, artHeight);
+
+        ctx.fillStyle = "rgb(3 24 46 / 14%)";
+        for (let y = 14; y < artHeight * .56; y += 30) {
+          for (let x = 12; x < artWidth; x += 30) {
+            ctx.beginPath();
+            ctx.arc(x, y, 1.15, 0, Math.PI * 2);
+            ctx.fill();
+          }
+        }
+
+        const sunRadius = Math.min(artWidth, artHeight) * .145;
+        ctx.beginPath();
+        ctx.arc(artWidth * .76, artHeight * .29, sunRadius, 0, Math.PI * 2);
+        ctx.fillStyle = "#ffd84d";
+        ctx.shadowColor = "rgb(255 216 77 / 45%)";
+        ctx.shadowBlur = 22;
+        ctx.fill();
+        ctx.shadowBlur = 0;
+        ctx.strokeStyle = "#070b13";
+        ctx.lineWidth = 5;
+        ctx.stroke();
+
+        drawCloud(ctx, artWidth * .12, artHeight * .32, Math.min(35, artHeight * .085));
+        drawCloud(ctx, artWidth * .51, artHeight * .22, Math.min(29, artHeight * .07));
+        drawCloud(ctx, artWidth * .98, artHeight * .43, Math.min(43, artHeight * .09));
+
+        const buildingWidth = Math.max(32, artWidth / 24);
+        const buildingCount = Math.ceil(artWidth / buildingWidth);
+        for (let building = 0; building < buildingCount; building += 1) {
+          const x = building * buildingWidth - 1;
+          const w = buildingWidth * (.82 + (building % 3) * .06);
+          const fraction = .17 + ((building * 7 + 3) % 9) * .025;
+          const buildingHeight = artHeight * fraction;
+          const top = artHeight - buildingHeight;
+          ctx.fillStyle = building % 2 ? "#101b2b" : "#0a1423";
+          ctx.fillRect(x, top, w, buildingHeight + 2);
+          ctx.strokeStyle = "#03070e";
+          ctx.lineWidth = 3;
+          ctx.strokeRect(x, top, w, buildingHeight + 2);
+          if (building % 4 === 1) {
+            ctx.fillStyle = "#101b2b";
+            ctx.fillRect(x + w * .34, top - 12, w * .32, 13);
+            ctx.fillRect(x + w * .47, top - 23, w * .06, 12);
+          }
+          const columns = Math.max(2, Math.floor(w / 12));
+          const rows = Math.floor(buildingHeight / 17);
+          for (let row = 0; row < rows; row += 1) {
+            for (let column = 0; column < columns; column += 1) {
+              if ((building * 5 + row * 3 + column * 7) % 5 < 3) {
+                ctx.fillStyle = (building + row + column) % 4 === 0 ? "#63c7e2" : "#ffd84d";
+                ctx.fillRect(x + 6 + column * 12, top + 9 + row * 17, 5, 8);
+              }
+            }
+          }
+        }
+
+        ctx.strokeStyle = "#050a13";
+        ctx.lineWidth = 5;
+        ctx.beginPath();
+        ctx.moveTo(0, artHeight - 2);
+        ctx.lineTo(artWidth, artHeight - 2);
+        ctx.stroke();
+      }
+
+      function clearCanvas() {
+        context.fillStyle = "#050609";
+        context.fillRect(0, 0, width, height);
+      }
+
+      function getLevel(start, end) {
+        if (!frequencyData) return 0;
+        const first = Math.floor(start * frequencyData.length);
+        const last = Math.max(first + 1, Math.floor(end * frequencyData.length));
+        let total = 0;
+        for (let i = first; i < last; i += 1) total += frequencyData[i];
+        return total / (last - first) / 255;
+      }
+
+      function getPeakHz(minHz, maxHz) {
+        if (!frequencyData || !audioContext || !analyser) return 0;
+        const hzPerBin = audioContext.sampleRate / analyser.fftSize;
+        const first = Math.max(1, Math.floor(minHz / hzPerBin));
+        const last = Math.min(frequencyData.length, Math.ceil(maxHz / hzPerBin));
+        let peak = 0;
+        for (let i = first; i < last; i += 1) peak = Math.max(peak, frequencyData[i]);
+        return peak / 255;
+      }
+
+      function gradient() {
+        const color = context.createLinearGradient(0, 0, width, 0);
+        color.addColorStop(0, "#ff5f6d");
+        color.addColorStop(.18, "#ffca5c");
+        color.addColorStop(.36, "#72f1b8");
+        color.addColorStop(.55, "#58c7ff");
+        color.addColorStop(.75, "#c084fc");
+        color.addColorStop(1, "#ff5fbd");
+        return color;
+      }
+
+      function drawIdle() {
+        if (!context || !width || !height) return;
+        clearCanvas();
+        if (mode === "invaders") {
+          drawInvaders(performance.now(), true);
+          return;
+        }
+        const cx = width / 2;
+        const cy = height / 2;
+        const radius = Math.min(width, height) * .19;
+        context.beginPath();
+        context.arc(cx, cy, radius, 0, Math.PI * 2);
+        context.strokeStyle = "rgb(137 148 176 / 25%)";
+        context.lineWidth = 2;
+        context.stroke();
+        context.beginPath();
+        context.moveTo(cx - radius * .72, cy);
+        context.lineTo(cx + radius * .72, cy);
+        context.strokeStyle = "rgb(137 148 176 / 25%)";
+        context.stroke();
+        context.beginPath();
+        context.moveTo(cx, cy - radius * .72);
+        context.lineTo(cx, cy + radius * .72);
+        context.stroke();
+      }
+
+      function drawBars() {
+        const count = 72;
+        const gap = Math.max(2, width * .004);
+        const barWidth = (width - gap * (count + 1)) / count;
+        const maxHeight = height * .76;
+        for (let i = 0; i < count; i += 1) {
+          const position = i / count;
+          const bin = Math.floor(Math.pow(position, 1.75) * (frequencyData.length - 1));
+          const value = frequencyData[bin] / 255;
+          const barHeight = Math.max(3, value * maxHeight);
+          const x = gap + i * (barWidth + gap);
+          const y = height - barHeight - 18;
+          const hue = (i / count) * 330 + 5;
+          const fill = context.createLinearGradient(0, y, 0, height - 18);
+          fill.addColorStop(0, `hsl(${hue}, 100%, 72%)`);
+          fill.addColorStop(1, `hsl(${hue}, 90%, 48%)`);
+          context.fillStyle = fill;
+          context.shadowColor = `hsl(${hue}, 100%, 60%)`;
+          context.shadowBlur = 12;
+          context.fillRect(x, y, barWidth, barHeight);
+        }
+        context.shadowBlur = 0;
+      }
+
+      function drawRadial() {
+        const cx = width / 2;
+        const cy = height / 2;
+        const base = Math.min(width, height) * .19;
+        const count = 112;
+        for (let i = 0; i < count; i += 1) {
+          const bin = Math.floor(Math.pow(i / count, 1.7) * (frequencyData.length - 1));
+          const value = frequencyData[bin] / 255;
+          const angle = (i / count) * Math.PI * 2 - Math.PI / 2;
+          const outer = base + 8 + value * Math.min(width, height) * .24;
+          context.beginPath();
+          context.moveTo(cx + Math.cos(angle) * base, cy + Math.sin(angle) * base);
+          context.lineTo(cx + Math.cos(angle) * outer, cy + Math.sin(angle) * outer);
+          context.strokeStyle = `hsl(${(i / count) * 360}, 96%, ${58 + value * 18}%)`;
+          context.lineWidth = Math.max(2, Math.min(width, height) * .006);
+          context.lineCap = "round";
+          context.stroke();
+        }
+        context.beginPath();
+        context.arc(cx, cy, base * .74, 0, Math.PI * 2);
+        context.strokeStyle = "rgb(255 255 255 / 28%)";
+        context.lineWidth = 1;
+        context.stroke();
+      }
+
+      function drawWave() {
+        const cx = width / 2;
+        const cy = height / 2;
+        const amplitude = height * (.18 + getLevel(0, .18) * .28);
+        context.beginPath();
+        for (let i = 0; i < waveformData.length; i += 1) {
+          const x = (i / (waveformData.length - 1)) * width;
+          const y = cy + ((waveformData[i] - 128) / 128) * amplitude;
+          if (i === 0) context.moveTo(x, y);
+          else context.lineTo(x, y);
+        }
+        context.strokeStyle = gradient();
+        context.lineWidth = 3;
+        context.shadowColor = "#63c9ff";
+        context.shadowBlur = 16;
+        context.stroke();
+        context.shadowBlur = 0;
+        context.beginPath();
+        context.moveTo(0, cy);
+        context.lineTo(width, cy);
+        context.strokeStyle = "rgb(255 255 255 / 12%)";
+        context.lineWidth = 1;
+        context.stroke();
+      }
+
+      function drawHalo(now) {
+        const cx = width / 2;
+        const cy = height / 2;
+        const size = Math.min(width, height);
+        const bass = getLevel(0, .08);
+        const mids = getLevel(.08, .38);
+        for (let ring = 0; ring < 6; ring += 1) {
+          const radius = size * (.11 + ring * .052) + bass * size * .04;
+          context.beginPath();
+          context.arc(cx, cy, radius, now * .00016 * (ring % 2 ? -1 : 1), Math.PI * 2 + now * .00016 * (ring % 2 ? -1 : 1));
+          context.strokeStyle = `hsla(${(ring * 48 + now * .015) % 360}, 95%, 66%, ${.72 - ring * .07})`;
+          context.lineWidth = 1.5 + mids * 4;
+          context.shadowColor = context.strokeStyle;
+          context.shadowBlur = 14 + bass * 18;
+          context.stroke();
+        }
+        context.shadowBlur = 0;
+        const dots = 48;
+        for (let i = 0; i < dots; i += 1) {
+          const angle = (i / dots) * Math.PI * 2 + now * .0001;
+          const radius = size * .27 + getLevel(i / dots * .25, Math.min(1, i / dots * .25 + .04)) * size * .13;
+          context.beginPath();
+          context.arc(cx + Math.cos(angle) * radius, cy + Math.sin(angle) * radius, 1.5 + bass * 3, 0, Math.PI * 2);
+          context.fillStyle = `hsl(${(i / dots) * 360}, 100%, 72%)`;
+          context.fill();
+        }
+      }
+
+      function drawParticles() {
+        const cx = width / 2;
+        const cy = height / 2;
+        const maxRadius = Math.hypot(width, height) * .54;
+        const energy = getLevel(0, .5);
+        for (const particle of particles) {
+          const speed = .0018 + energy * .009;
+          particle.radius += speed;
+          if (particle.radius > 1) {
+            particle.radius = Math.random() * .08;
+            particle.angle = Math.random() * Math.PI * 2;
+            particle.hue = Math.random() * 360;
+          }
+          const radius = particle.radius * maxRadius;
+          const x = cx + Math.cos(particle.angle) * radius;
+          const y = cy + Math.sin(particle.angle) * radius;
+          const bin = Math.floor(particle.radius * (frequencyData.length - 1));
+          const level = frequencyData[bin] / 255;
+          const dotSize = particle.size + level * 5;
+          context.beginPath();
+          context.arc(x, y, dotSize, 0, Math.PI * 2);
+          context.fillStyle = `hsla(${particle.hue}, 100%, 68%, ${.45 + level * .55})`;
+          context.shadowColor = context.fillStyle;
+          context.shadowBlur = 5 + level * 15;
+          context.fill();
+        }
+        context.shadowBlur = 0;
+      }
+
+      function drawInvader(invader, offsetX) {
+        const x = invader.x + offsetX;
+        const y = invader.y;
+        const pixel = invader.pixel;
+        context.fillStyle = ["#9cff70", "#62f5cc", "#d37bff"][invader.row];
+        context.shadowColor = context.fillStyle;
+        context.shadowBlur = 9;
+        for (let row = 0; row < invaderSprite.length; row += 1) {
+          for (let column = 0; column < invaderSprite[row].length; column += 1) {
+            if (invaderSprite[row][column] === "1") {
+              context.fillRect(x + column * pixel, y + row * pixel, pixel * .82, pixel * .82);
+            }
+          }
+        }
+        context.shadowBlur = 0;
+      }
+
+      function drawShip(now) {
+        const shipY = height - 42;
+        const shipWidth = Math.max(30, Math.min(42, width * .055));
+        const move = Math.sin(now * .00085) * width * .38
+          + Math.sin(now * .00032) * width * .1;
+        const targetX = Math.max(shipWidth, Math.min(width - shipWidth, width / 2 + move));
+        arcade.shipX += (targetX - arcade.shipX) * .045;
+
+        context.save();
+        context.translate(arcade.shipX, shipY);
+        context.fillStyle = "#77ffbe";
+        context.shadowColor = "#65ffd1";
+        context.shadowBlur = 14;
+        context.fillRect(-shipWidth * .5, 0, shipWidth, 8);
+        context.fillRect(-shipWidth * .32, -7, shipWidth * .64, 8);
+        context.fillRect(-shipWidth * .13, -14, shipWidth * .26, 9);
+        context.fillStyle = "#f4ffff";
+        context.fillRect(-2, -12, 4, 8);
+        context.shadowBlur = 0;
+        context.fillStyle = "rgb(105 255 209 / 55%)";
+        context.fillRect(-shipWidth * .28, 10, shipWidth * .56, 5);
+        context.restore();
+      }
+
+      function drawInvaders(now, idle = false) {
+        const fleetOffset = Math.sin(now * .00048 + arcade.fleetPhase) * width * .065;
+        const pixel = Math.max(3, Math.min(5, width / 210));
+
+        context.strokeStyle = "rgb(91 139 255 / 10%)";
+        context.lineWidth = 1;
+        for (let y = 28; y < height; y += 32) {
+          context.beginPath();
+          context.moveTo(0, y);
+          context.lineTo(width, y);
+          context.stroke();
+        }
+
+        for (const invader of arcade.invaders) {
+          if (invader.alive) drawInvader(invader, fleetOffset);
+        }
+
+        if (!idle && frequencyData) {
+          const bands = {
+            bass: getPeakHz(35, 220),
+            mid: getPeakHz(220, 2500),
+            high: getPeakHz(2500, 18000)
+          };
+          const thresholds = {
+            bass: { level: .15, rise: .035 },
+            mid: { level: .13, rise: .03 },
+            high: { level: .11, rise: .025 }
+          };
+          const noteHits = Object.entries(bands)
+            .map(([band, level]) => ({ band, level, rise: level - arcade.previousBands[band] }))
+            .filter(hit => hit.level > thresholds[hit.band].level && hit.rise > thresholds[hit.band].rise)
+            .sort((a, b) => b.rise / thresholds[b.band].rise - a.rise / thresholds[a.band].rise);
+          const noteHit = noteHits[0];
+          const fireDelay = Math.max(75, 180 / sensitivity);
+          if (noteHit && now - arcade.lastShot > fireDelay) {
+            const angleWidth = noteHit.band === "high" ? .34 : noteHit.band === "bass" ? .18 : .26;
+            const angle = Math.sin(arcade.shotIndex * 2.35) * angleWidth;
+            const speed = 8 + noteHit.level * 10 + (noteHit.band === "high" ? 3 : 0);
+            arcade.bullets.push({
+              x: arcade.shipX,
+              y: height - 57,
+              vx: Math.sin(angle) * speed,
+              vy: -Math.cos(angle) * speed,
+              power: noteHit.level,
+              band: noteHit.band,
+              hueOffset: arcade.shotIndex * 19,
+              sway: (Math.random() - .5) * .8,
+              phase: Math.random() * Math.PI * 2
+            });
+            arcade.lastShot = now;
+            arcade.shotIndex += 1;
+          }
+          arcade.previousBands = bands;
+
+          for (const bullet of arcade.bullets) {
+            bullet.x += bullet.vx + Math.sin(now * .007 + bullet.phase) * bullet.sway;
+            bullet.y += bullet.vy;
+          }
+          arcade.bullets = arcade.bullets.filter(bullet =>
+            bullet.y > -24 && bullet.x > -24 && bullet.x < width + 24
+          );
+
+          for (const bullet of arcade.bullets) {
+            const hue = (now * .012 + bullet.hueOffset) % 360;
+            const shotColor = `hsl(${hue}, 100%, 68%)`;
+            context.beginPath();
+            context.moveTo(bullet.x - bullet.vx * 1.5, bullet.y - bullet.vy * 1.5);
+            context.lineTo(bullet.x + bullet.vx * .3, bullet.y + bullet.vy * .3);
+            context.strokeStyle = shotColor;
+            const bandWidth = bullet.band === "bass" ? 1.35 : bullet.band === "high" ? .8 : 1;
+            context.lineWidth = (2.5 + bullet.power * 4) * bandWidth;
+            context.shadowColor = shotColor;
+            context.shadowBlur = 12 + bullet.power * 14;
+            context.stroke();
+            context.beginPath();
+            context.moveTo(bullet.x - bullet.vx * .55, bullet.y - bullet.vy * .55);
+            context.lineTo(bullet.x + bullet.vx * .16, bullet.y + bullet.vy * .16);
+            context.strokeStyle = "rgb(255 255 255 / 78%)";
+            context.lineWidth = Math.max(1, bullet.power * 2.5);
+            context.stroke();
+            context.shadowBlur = 0;
+
+            for (const invader of arcade.invaders) {
+              const alienX = invader.x + fleetOffset;
+              if (invader.alive && bullet.x >= alienX && bullet.x <= alienX + pixel * 8
+                && bullet.y >= invader.y && bullet.y <= invader.y + pixel * 8) {
+                invader.alive = false;
+                bullet.y = -20;
+                arcade.score += 10;
+                for (let spark = 0; spark < 8; spark += 1) {
+                  arcade.sparks.push({
+                    x: alienX + pixel * 4,
+                    y: invader.y + pixel * 4,
+                    vx: (Math.random() - .5) * 5,
+                    vy: (Math.random() - .5) * 5,
+                    life: 1,
+                    hue: Math.random() * 360
+                  });
+                }
+                break;
+              }
+            }
+          }
+        }
+
+        for (const spark of arcade.sparks) {
+          spark.x += spark.vx;
+          spark.y += spark.vy;
+          spark.life -= .035;
+          context.fillStyle = `hsla(${spark.hue}, 100%, 70%, ${Math.max(0, spark.life)})`;
+          context.fillRect(spark.x, spark.y, 3, 3);
+        }
+        arcade.sparks = arcade.sparks.filter(spark => spark.life > 0);
+
+        drawShip(now);
+
+        if (arcade.invaders.every(invader => !invader.alive)) {
+          arcade.score += 100;
+          arcade.fleetPhase += 1.4;
+          for (const invader of arcade.invaders) {
+            invader.alive = true;
+            invader.y = 44 + invader.row * pixel * 13;
+          }
+        }
+        context.shadowBlur = 0;
+        context.fillStyle = "#d9ffe9";
+        context.font = "12px ui-monospace, monospace";
+        context.fillText(`SCORE ${String(arcade.score).padStart(4, "0")}`, 16, 24);
+        context.fillStyle = "#8b91a3";
+        context.fillText("SOUND DEFENSE", Math.max(16, width - 150), 24);
+      }
+
+      function drawFrame(now) {
+        if (!analyser) return;
+        analyser.smoothingTimeConstant = mode === "invaders" ? .6 : .78;
+        analyser.getByteFrequencyData(frequencyData);
+        analyser.getByteTimeDomainData(waveformData);
+        for (let i = 0; i < frequencyData.length; i += 1) {
+          frequencyData[i] = Math.min(255, Math.round(frequencyData[i] * sensitivity));
+        }
+        for (let i = 0; i < waveformData.length; i += 1) {
+          waveformData[i] = Math.max(0, Math.min(255, Math.round(128 + (waveformData[i] - 128) * sensitivity)));
+        }
+        clearCanvas();
+        if (mode === "bars") drawBars();
+        else if (mode === "radial") drawRadial();
+        else if (mode === "wave") drawWave();
+        else if (mode === "halo") drawHalo(now);
+        else if (mode === "particles") drawParticles();
+        else if (mode === "invaders") drawInvaders(now);
+        animationId = window.requestAnimationFrame(drawFrame);
+      }
+
+      function setStatus(message, state = "normal") {
+        status.textContent = message;
+        status.dataset.state = state;
+      }
+
+      function stopCapture() {
+        if (stopping) return;
+        stopping = true;
+        if (animationId) window.cancelAnimationFrame(animationId);
+        animationId = null;
+        if (stream) stream.getTracks().forEach(track => track.stop());
+        stream = null;
+        source = null;
+        analyser = null;
+        frequencyData = null;
+        waveformData = null;
+        const previousAudioContext = audioContext;
+        audioContext = null;
+        if (previousAudioContext && previousAudioContext.state !== "closed") previousAudioContext.close();
+        startButton.disabled = false;
+        stopButton.disabled = true;
+        drawIdle();
+        stageLabel.textContent = `${modes[mode]} / WAITING FOR AUDIO`;
+        setStatus("Audio stopped. Nothing was recorded or uploaded.");
+        stopping = false;
+      }
+
+      async function startCapture() {
+        if (!window.isSecureContext) {
+          setStatus("Open this page over HTTPS before starting audio capture.", "error");
+          return;
+        }
+        if (!navigator.mediaDevices?.getDisplayMedia) {
+          setStatus("This browser does not support system-audio sharing. Try Chrome or Edge on Windows.", "error");
+          return;
+        }
+        startButton.disabled = true;
+        setStatus("Choose a screen in the browser picker and enable system audio.");
+        try {
+          stream = await navigator.mediaDevices.getDisplayMedia({
+            video: true,
+            audio: true,
+            systemAudio: "include"
+          });
+          if (!stream.getAudioTracks().length) {
+            stream.getTracks().forEach(track => track.stop());
+            stream = null;
+            throw new Error("No audio track was shared. Select a source with Share system audio enabled.");
+          }
+
+          const AudioContextClass = window.AudioContext || window.webkitAudioContext;
+          audioContext = new AudioContextClass();
+          await audioContext.resume();
+          analyser = audioContext.createAnalyser();
+          analyser.fftSize = 4096;
+          analyser.smoothingTimeConstant = .78;
+          analyser.minDecibels = -90;
+          analyser.maxDecibels = -18;
+          source = audioContext.createMediaStreamSource(stream);
+          source.connect(analyser);
+          frequencyData = new Uint8Array(analyser.frequencyBinCount);
+          waveformData = new Uint8Array(analyser.fftSize);
+          stream.getTracks().forEach(track => track.addEventListener("ended", stopCapture, { once: true }));
+          startButton.disabled = true;
+          stopButton.disabled = false;
+          stageLabel.textContent = `${modes[mode]} / LIVE AUDIO`;
+          setStatus("Listening to shared audio. Choose any visualizer style above.");
+          animationId = window.requestAnimationFrame(drawFrame);
+        } catch (error) {
+          if (stream) stream.getTracks().forEach(track => track.stop());
+          stream = null;
+          startButton.disabled = false;
+          stopButton.disabled = true;
+          stageLabel.textContent = `${modes[mode]} / WAITING FOR AUDIO`;
+          const message = error?.name === "NotAllowedError"
+            ? "Screen/audio sharing was canceled. Click Start system audio when you’re ready."
+            : error?.message || "Could not start audio capture. Try another shared source or browser.";
+          setStatus(message, "error");
+        }
+      }
+
+      modeButtons.forEach(button => {
+        button.addEventListener("click", () => {
+          mode = button.dataset.mode;
+          modeButtons.forEach(option => option.setAttribute("aria-pressed", String(option === button)));
+          stageLabel.textContent = `${modes[mode]} / ${analyser ? "LIVE AUDIO" : "WAITING FOR AUDIO"}`;
+          if (!analyser) drawIdle();
+        });
+      });
+      startButton.addEventListener("click", startCapture);
+      stopButton.addEventListener("click", stopCapture);
+      sensitivityInput.addEventListener("input", () => {
+        sensitivity = Number(sensitivityInput.value) / 100;
+        sensitivityValue.value = `${sensitivityInput.value}%`;
+        sensitivityValue.textContent = `${sensitivityInput.value}%`;
+      });
+      window.addEventListener("resize", resizeCanvas, { passive: true });
+      resizeCanvas();
+    })();
+  </script>
+</body>
+</html>
