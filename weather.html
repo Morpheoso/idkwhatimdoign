@@ -1,0 +1,540 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="referrer" content="strict-origin-when-cross-origin">
+  <meta name="theme-color" content="#05070b">
+  <title>Flight WX | Local Weather</title>
+  <style>
+    :root {
+      color-scheme: dark;
+      font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      color: #ecf4f3;
+      background: #05070b;
+      --green: #8cff91;
+      --green-dim: #43c878;
+      --muted: #9aa9b4;
+      --line: rgb(146 173 190 / 24%);
+      --panel: rgb(9 15 23 / 92%);
+    }
+    * { box-sizing: border-box; }
+    body {
+      min-height: 100vh;
+      margin: 0;
+      background: #05070b;
+      color: #ecf4f3;
+    }
+    button, input { font: inherit; }
+    button, a, input { -webkit-tap-highlight-color: transparent; }
+    .space {
+      position: fixed;
+      inset: 0;
+      z-index: -2;
+      overflow: hidden;
+      background:
+        radial-gradient(ellipse at 50% 45%, rgb(20 41 72 / 38%), transparent 64%),
+        radial-gradient(ellipse at 12% 18%, rgb(49 80 111 / 16%), transparent 42%),
+        #030509;
+    }
+    .space::before, .space::after {
+      content: "";
+      position: absolute;
+      inset: -100% 0 0;
+      opacity: .65;
+      background-image:
+        radial-gradient(1px 1px at 21px 33px, #fff 98%, transparent),
+        radial-gradient(1px 1px at 130px 87px, #b6d9ff 98%, transparent),
+        radial-gradient(2px 2px at 202px 177px, #fff 98%, transparent),
+        radial-gradient(1px 1px at 298px 29px, #c9e7ff 98%, transparent);
+      background-size: 340px 230px;
+      animation: star-drift 42s linear infinite;
+    }
+    .space::after {
+      opacity: .34;
+      background-size: 510px 390px;
+      animation-duration: 68s;
+      animation-direction: reverse;
+    }
+    @keyframes star-drift { to { transform: translateY(230px); } }
+    .page { width: min(1120px, calc(100% - 28px)); margin: 0 auto; padding: 22px 0 34px; }
+    .masthead, .row, .section-title, .location-line { display: flex; justify-content: space-between; align-items: center; gap: 14px; flex-wrap: wrap; }
+    .masthead { margin-bottom: 18px; }
+    .brand { display: flex; align-items: center; gap: 12px; }
+    .brand-mark { width: 38px; height: 38px; display: grid; place-items: center; border: 1px solid rgb(140 255 145 / 55%); border-radius: 50%; color: var(--green); text-shadow: 0 0 12px var(--green); font-size: 19px; }
+    .brand-name { font: 600 16px ui-monospace, SFMono-Regular, Consolas, monospace; letter-spacing: .13em; }
+    .eyebrow, .micro { color: var(--muted); font: 11px ui-monospace, SFMono-Regular, Consolas, monospace; letter-spacing: .13em; }
+    .mast-actions { display: flex; gap: 9px; align-items: center; }
+    .status { color: var(--green); font: 11px ui-monospace, SFMono-Regular, Consolas, monospace; letter-spacing: .08em; }
+    .button, .home-link {
+      min-height: 40px;
+      display: inline-flex;
+      justify-content: center;
+      align-items: center;
+      padding: 0 14px;
+      border: 1px solid rgb(140 255 145 / 44%);
+      border-radius: 5px;
+      color: #dcffe0;
+      background: rgb(22 50 38 / 58%);
+      text-decoration: none;
+      cursor: pointer;
+    }
+    .button:hover, .home-link:hover { background: rgb(42 91 57 / 62%); }
+    .button:focus-visible, .home-link:focus-visible, input:focus-visible { outline: 2px solid var(--green); outline-offset: 3px; }
+    .zip-card {
+      width: min(540px, 100%);
+      margin: 12vh auto 0;
+      padding: clamp(22px, 5vw, 38px);
+      background: rgb(7 13 20 / 94%);
+      border: 1px solid rgb(140 255 145 / 30%);
+      border-radius: 12px;
+      box-shadow: 0 0 48px rgb(41 127 102 / 15%);
+    }
+    .zip-card h1 { margin: 12px 0 8px; font-size: clamp(26px, 5vw, 38px); font-weight: 550; }
+    .zip-card p { color: #b4c1c9; line-height: 1.55; }
+    .zip-form { display: flex; flex-wrap: wrap; gap: 10px; margin-top: 22px; }
+    .zip-form input {
+      flex: 1 1 180px;
+      min-width: 0;
+      min-height: 48px;
+      padding: 0 14px;
+      border: 1px solid var(--line);
+      border-radius: 5px;
+      color: #fff;
+      background: #090e14;
+    }
+    .zip-form .button { min-height: 48px; }
+    .message { min-height: 1.4em; margin: 12px 0 0; color: #ffb5a8; font-size: 14px; }
+    [hidden] { display: none !important; }
+    .dashboard { display: grid; gap: 14px; }
+    .cockpit {
+      overflow: hidden;
+      border: 1px solid rgb(147 178 195 / 34%);
+      border-radius: 13px;
+      background: rgb(6 10 15 / 91%);
+      box-shadow: 0 18px 70px rgb(0 0 0 / 48%), inset 0 0 28px rgb(89 131 158 / 9%);
+    }
+    .canopy {
+      min-height: 260px;
+      position: relative;
+      display: grid;
+      align-items: end;
+      overflow: hidden;
+      padding: 22px clamp(18px, 4vw, 38px) 26px;
+      background:
+        linear-gradient(180deg, rgb(5 9 15 / 5%), rgb(5 9 15 / 26%) 55%, rgb(5 9 15 / 84%)),
+        radial-gradient(ellipse at 50% 80%, rgb(47 74 108 / 20%), transparent 56%);
+      isolation: isolate;
+    }
+    .canopy::before {
+      content: "";
+      position: absolute;
+      inset: 0 0 auto;
+      height: 100%;
+      z-index: -1;
+      background-image:
+        radial-gradient(1px 1px at 7% 18%, #fff 98%, transparent),
+        radial-gradient(1px 1px at 19% 42%, #b8d7ff 98%, transparent),
+        radial-gradient(2px 2px at 32% 13%, #fff 98%, transparent),
+        radial-gradient(1px 1px at 47% 35%, #d7eaff 98%, transparent),
+        radial-gradient(1px 1px at 61% 16%, #fff 98%, transparent),
+        radial-gradient(2px 2px at 73% 48%, #d7eaff 98%, transparent),
+        radial-gradient(1px 1px at 89% 24%, #fff 98%, transparent),
+        radial-gradient(1px 1px at 95% 67%, #b8d7ff 98%, transparent);
+      background-size: 100% 100%;
+      animation: canopy-stars 36s linear infinite;
+    }
+    @keyframes canopy-stars { from { transform: translateY(-5%); } to { transform: translateY(5%); } }
+    .canopy::after {
+      content: "";
+      position: absolute;
+      inset: 0;
+      z-index: 2;
+      pointer-events: none;
+      background: linear-gradient(112deg, transparent 0 14%, rgb(3 6 10 / 83%) 14.5% 16%, transparent 16.5% 83.5%, rgb(3 6 10 / 83%) 84% 85.5%, transparent 86%);
+      border-top: 6px solid rgb(3 6 10 / 75%);
+    }
+    .canopy-grid { position: relative; z-index: 1; display: grid; grid-template-columns: 1fr auto 1fr; align-items: end; gap: 18px; }
+    .canopy-side { display: grid; gap: 8px; padding-bottom: 6px; color: #daebf1; font: 12px ui-monospace, SFMono-Regular, Consolas, monospace; text-shadow: 0 1px 8px #000; }
+    .canopy-side:last-child { text-align: right; }
+    .temperature { min-width: 190px; text-align: center; text-shadow: 0 2px 16px #000; }
+    .temperature strong { display: block; font-size: clamp(54px, 9vw, 88px); font-weight: 450; line-height: .95; letter-spacing: -.07em; }
+    .temperature span { display: block; margin-top: 11px; color: #d1e4eb; font: 12px ui-monospace, SFMono-Regular, Consolas, monospace; letter-spacing: .1em; }
+    .bezel { height: 15px; background: linear-gradient(#26313a, #070b10 65%); border-top: 1px solid rgb(191 219 234 / 28%); border-bottom: 1px solid #000; }
+    .instrument-panel { padding: clamp(14px, 3vw, 25px); background: linear-gradient(180deg, rgb(13 19 25 / 98%), rgb(5 8 12 / 99%)); }
+    .panel-title { margin: 0; color: #a8bcc6; font: 12px ui-monospace, SFMono-Regular, Consolas, monospace; letter-spacing: .16em; }
+    .gauges { display: grid; grid-template-columns: repeat(4, minmax(0,1fr)); gap: clamp(10px, 2vw, 20px); padding: 18px 0; }
+    .gauge {
+      min-width: 0;
+      padding: 8px 7px 12px;
+      text-align: center;
+      background: radial-gradient(ellipse at 50% 50%, rgb(20 29 33 / 62%), rgb(7 11 15 / 72%) 70%);
+      border: 1px solid rgb(133 158 171 / 24%);
+      border-radius: 9px;
+      box-shadow: inset 0 0 18px rgb(0 0 0 / 55%), 0 2px 10px rgb(0 0 0 / 34%);
+    }
+    .gauge-title { color: #a4b8bf; font: 11px ui-monospace, SFMono-Regular, Consolas, monospace; letter-spacing: .12em; }
+    .gauge-face { position: relative; width: min(100%, 190px); margin: 2px auto 0; aspect-ratio: 1.08; }
+    .gauge-face svg { display: block; width: 100%; height: 100%; overflow: visible; }
+    .gauge-track { fill: none; stroke: rgb(129 157 169 / 28%); stroke-width: 2.1; }
+    .gauge-tick { stroke: #9caeb0; stroke-width: 1; opacity: .76; }
+    .gauge-tick.major { stroke: #d2d9cc; stroke-width: 1.6; opacity: .95; }
+    .gauge-number { fill: #c2d0cd; font: 8px ui-monospace, SFMono-Regular, Consolas, monospace; text-anchor: middle; dominant-baseline: middle; }
+    .gauge-needle { stroke: var(--green); stroke-width: 2.4; stroke-linecap: round; filter: drop-shadow(0 0 2px var(--green)) drop-shadow(0 0 7px rgb(140 255 145 / 84%)); }
+    .gauge-tail { stroke: var(--green-dim); stroke-width: 2.8; stroke-linecap: round; filter: drop-shadow(0 0 4px var(--green)); }
+    .gauge-hub { fill: #c9ffd0; stroke: var(--green); stroke-width: 2; filter: drop-shadow(0 0 5px var(--green)); }
+    .gauge-reading { position: absolute; left: 0; right: 0; top: 53%; color: #e6ffe7; font: 600 clamp(17px, 2vw, 22px) ui-monospace, SFMono-Regular, Consolas, monospace; text-shadow: 0 0 11px rgb(140 255 145 / 34%); }
+    .gauge-unit { margin-top: -13px; color: var(--muted); font: 10px ui-monospace, SFMono-Regular, Consolas, monospace; letter-spacing: .08em; }
+    .readouts { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); border-top: 1px solid var(--line); border-bottom: 1px solid var(--line); }
+    .readout { padding: 13px 12px; border-right: 1px solid var(--line); }
+    .readout:last-child { border-right: 0; }
+    .readout span { display: block; margin-bottom: 6px; color: var(--muted); font: 10px ui-monospace, SFMono-Regular, Consolas, monospace; letter-spacing: .09em; }
+    .readout strong { font-size: 13px; font-weight: 500; }
+    .lower-grid { display: grid; grid-template-columns: 1.4fr 1fr; gap: 14px; }
+    .module { padding: 17px; border: 1px solid rgb(133 158 171 / 25%); border-radius: 8px; background: var(--panel); box-shadow: inset 0 0 18px rgb(0 0 0 / 36%); }
+    .section-title { margin-bottom: 10px; }
+    .forecast { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; }
+    .forecast-day { min-width: 0; padding: 10px 8px; border-left: 1px solid var(--line); }
+    .forecast-day:first-child { border-left: 0; }
+    .forecast-day .day { color: #d5e3e7; font: 11px ui-monospace, SFMono-Regular, Consolas, monospace; }
+    .forecast-day .icon { margin: 9px 0; color: #d7ebee; font-size: 19px; }
+    .forecast-day .condition { min-height: 2.4em; color: var(--muted); font-size: 12px; }
+    .forecast-day .temps { display: flex; justify-content: space-between; gap: 4px; margin-top: 8px; font: 600 13px ui-monospace, SFMono-Regular, Consolas, monospace; }
+    .forecast-day .temps span:last-child { color: #9cabb4; }
+    .alerts { display: grid; gap: 9px; }
+    .alert-status { display: flex; align-items: flex-start; gap: 9px; color: var(--green); }
+    .alert-status.warn { color: #ffcf70; }
+    .alert-status.danger { color: #ff8177; }
+    .alert-item { padding: 10px; border-left: 2px solid currentColor; background: rgb(255 255 255 / 3%); }
+    .alert-item strong { display: block; margin-bottom: 5px; }
+    .alert-item p { margin: 0; color: #c0cbd0; font-size: 13px; line-height: 1.45; }
+    .alert-item a { display: inline-block; margin-top: 7px; color: #b8e2ff; font-size: 12px; }
+    .footer { display: flex; justify-content: space-between; flex-wrap: wrap; gap: 8px; padding: 2px 3px; color: var(--muted); font: 10px ui-monospace, SFMono-Regular, Consolas, monospace; }
+    @media (max-width: 690px) {
+      .gauges { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+      .lower-grid { grid-template-columns: 1fr; }
+      .canopy { min-height: 245px; }
+      .canopy-grid { grid-template-columns: 1fr auto 1fr; gap: 5px; }
+      .temperature { min-width: 130px; }
+      .canopy-side { font-size: 10px; }
+      .readouts { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+      .readout:nth-child(2) { border-right: 0; }
+      .readout:nth-child(-n+2) { border-bottom: 1px solid var(--line); }
+    }
+    @media (max-width: 390px) {
+      .page { width: calc(100% - 18px); padding-top: 12px; }
+      .temperature { min-width: 105px; }
+      .canopy-side { font-size: 9px; }
+      .forecast { gap: 2px; }
+      .forecast-day { padding-inline: 4px; }
+    }
+    @media (prefers-reduced-motion: reduce) { .space::before, .space::after, .canopy::before { animation: none; } }
+  </style>
+</head>
+<body>
+  <div class="space" aria-hidden="true"></div>
+  <main class="page">
+    <header class="masthead">
+      <div class="brand"><div class="brand-mark" aria-hidden="true">◉</div><div><div class="brand-name">FLIGHT WX</div><div class="eyebrow">LOCAL WEATHER SYSTEM</div></div></div>
+      <div class="mast-actions"><span class="status">● SYSTEM READY</span><a class="home-link" href="index.html">HOME</a></div>
+    </header>
+
+    <section class="zip-card" id="zip-screen">
+      <div class="eyebrow">LOCAL WEATHER · UNITED STATES</div>
+      <h1>Enter your ZIP code</h1>
+      <p>Set your local flight display to load current conditions, a 3-day forecast, and active weather alerts for your area.</p>
+      <form class="zip-form" id="zip-form">
+        <input id="zip-input" name="zip" inputmode="numeric" autocomplete="postal-code" pattern="[0-9]{5}" maxlength="5" placeholder="5-digit ZIP code" aria-label="5-digit ZIP code" required>
+        <button class="button" id="load-button" type="submit">LOAD WEATHER</button>
+      </form>
+      <p class="message" id="zip-message" role="alert" aria-live="polite"></p>
+      <div class="eyebrow">Weather alerts are sourced from the U.S. National Weather Service.</div>
+    </section>
+
+    <section class="dashboard" id="dashboard" hidden aria-live="polite">
+      <div class="location-line"><div><div class="eyebrow">LOCAL WEATHER · <span id="location-name">—</span></div><div class="micro" id="updated-at">WAITING FOR WEATHER DATA</div></div><button class="button" id="change-zip" type="button">CHANGE ZIP</button></div>
+      <section class="cockpit" aria-label="Weather cockpit instruments">
+        <div class="canopy">
+          <div class="canopy-grid">
+            <div class="canopy-side"><span class="eyebrow">WIND VECTOR</span><strong id="wind-readout">—</strong><span id="visibility-readout">LOCAL CONDITIONS</span></div>
+            <div class="temperature"><strong id="temperature">—°</strong><span id="condition">LOADING CONDITIONS</span></div>
+            <div class="canopy-side"><span class="eyebrow">FEELS LIKE</span><strong id="feels-like">—°</strong><span id="local-clock">LOCAL TIME —</span></div>
+          </div>
+        </div>
+        <div class="bezel"></div>
+        <div class="instrument-panel">
+          <div class="section-title"><h2 class="panel-title">WEATHER INSTRUMENTS</h2><span class="micro" id="zip-label">ZIP —</span></div>
+          <div class="gauges">
+            <div class="gauge" data-gauge="humidity"><div class="gauge-title">HUMIDITY</div><div class="gauge-face"><svg viewBox="0 0 200 190" role="img" aria-label="Humidity gauge"><path class="gauge-track"></path><g class="ticks"></g><line class="gauge-tail" x1="100" y1="100" x2="100" y2="117"></line><line class="gauge-needle" x1="100" y1="100" x2="100" y2="43"></line><circle class="gauge-hub" cx="100" cy="100" r="4"></circle></svg><div class="gauge-reading">—</div></div><div class="gauge-unit">RELATIVE HUMIDITY</div></div>
+            <div class="gauge" data-gauge="uv"><div class="gauge-title">UV INDEX</div><div class="gauge-face"><svg viewBox="0 0 200 190" role="img" aria-label="UV index gauge"><path class="gauge-track"></path><g class="ticks"></g><line class="gauge-tail" x1="100" y1="100" x2="100" y2="117"></line><line class="gauge-needle" x1="100" y1="100" x2="100" y2="43"></line><circle class="gauge-hub" cx="100" cy="100" r="4"></circle></svg><div class="gauge-reading">—</div></div><div class="gauge-unit">UV RADIATION</div></div>
+            <div class="gauge" data-gauge="aqi"><div class="gauge-title">AIR QUALITY</div><div class="gauge-face"><svg viewBox="0 0 200 190" role="img" aria-label="Air quality index gauge"><path class="gauge-track"></path><g class="ticks"></g><line class="gauge-tail" x1="100" y1="100" x2="100" y2="117"></line><line class="gauge-needle" x1="100" y1="100" x2="100" y2="43"></line><circle class="gauge-hub" cx="100" cy="100" r="4"></circle></svg><div class="gauge-reading">—</div></div><div class="gauge-unit">US AQI</div></div>
+            <div class="gauge" data-gauge="wind"><div class="gauge-title">WIND SPEED</div><div class="gauge-face"><svg viewBox="0 0 200 190" role="img" aria-label="Wind speed gauge"><path class="gauge-track"></path><g class="ticks"></g><line class="gauge-tail" x1="100" y1="100" x2="100" y2="117"></line><line class="gauge-needle" x1="100" y1="100" x2="100" y2="43"></line><circle class="gauge-hub" cx="100" cy="100" r="4"></circle></svg><div class="gauge-reading">—</div></div><div class="gauge-unit">MPH</div></div>
+          </div>
+          <div class="readouts">
+            <div class="readout"><span>SUNRISE / SUNSET</span><strong id="sun-times">— / —</strong></div>
+            <div class="readout"><span>MOON PHASE</span><strong id="moon-phase">—</strong></div>
+            <div class="readout"><span>HUMIDITY</span><strong id="humidity-value">—</strong></div>
+            <div class="readout"><span>DATA UPDATED</span><strong id="time-value">—</strong></div>
+          </div>
+        </div>
+      </section>
+
+      <div class="lower-grid">
+        <section class="module" aria-labelledby="forecast-title">
+          <div class="section-title"><h2 class="panel-title" id="forecast-title">3-DAY FORECAST</h2><span class="micro">HIGH / LOW</span></div>
+          <div class="forecast" id="forecast-list"></div>
+        </section>
+        <section class="module" aria-labelledby="alerts-title">
+          <div class="section-title"><h2 class="panel-title" id="alerts-title">WEATHER ALERTS</h2><span class="micro">NATIONAL WEATHER SERVICE</span></div>
+          <div class="alerts" id="alerts-list"><div class="micro">RETRIEVING LOCAL ALERTS…</div></div>
+        </section>
+      </div>
+      <footer class="footer"><span>Forecast &amp; air quality: Open-Meteo · Alerts: U.S. National Weather Service</span><span>Forecasts can change; follow official instructions during emergencies.</span></footer>
+    </section>
+  </main>
+
+  <script>
+    (() => {
+      const zipScreen = document.getElementById("zip-screen");
+      const zipForm = document.getElementById("zip-form");
+      const zipInput = document.getElementById("zip-input");
+      const zipMessage = document.getElementById("zip-message");
+      const loadButton = document.getElementById("load-button");
+      const dashboard = document.getElementById("dashboard");
+      const numberFormat = new Intl.NumberFormat(undefined, { maximumFractionDigits: 0 });
+      const svgNS = "http://www.w3.org/2000/svg";
+
+      function polar(radius, degrees) {
+        const angle = degrees * Math.PI / 180;
+        return { x: 100 + Math.cos(angle) * radius, y: 100 + Math.sin(angle) * radius };
+      }
+
+      function setupGauge(element, config) {
+        const svg = element.querySelector("svg");
+        const track = svg.querySelector(".gauge-track");
+        const ticks = svg.querySelector(".ticks");
+        const needle = svg.querySelector(".gauge-needle");
+        const tail = svg.querySelector(".gauge-tail");
+        const start = 135;
+        const span = 270;
+        const startPoint = polar(74, start);
+        const endPoint = polar(74, start + span);
+        track.setAttribute("d", `M ${startPoint.x} ${startPoint.y} A 74 74 0 1 1 ${endPoint.x} ${endPoint.y}`);
+        ticks.replaceChildren();
+
+        for (let index = 0; index <= config.minor; index += 1) {
+          const fraction = index / config.minor;
+          const angle = start + fraction * span;
+          const majorEvery = config.minor / (config.labels.length - 1);
+          const major = index % majorEvery === 0;
+          const outer = polar(major ? 72 : 72, angle);
+          const inner = polar(major ? 61 : 66, angle);
+          const mark = document.createElementNS(svgNS, "line");
+          mark.setAttribute("x1", inner.x); mark.setAttribute("y1", inner.y);
+          mark.setAttribute("x2", outer.x); mark.setAttribute("y2", outer.y);
+          mark.setAttribute("class", major ? "gauge-tick major" : "gauge-tick");
+          ticks.append(mark);
+          if (major) {
+            const labelIndex = Math.round(index / majorEvery);
+            const point = polar(51, angle);
+            const text = document.createElementNS(svgNS, "text");
+            text.setAttribute("x", point.x); text.setAttribute("y", point.y);
+            text.setAttribute("class", "gauge-number");
+            text.textContent = config.labels[labelIndex] ?? "";
+            ticks.append(text);
+          }
+        }
+        element.setAttribute("data-min", config.min);
+        element.setAttribute("data-max", config.max);
+        element.setAttribute("data-start", start);
+        element.setAttribute("data-span", span);
+        needle.dataset.configured = "true";
+        tail.dataset.configured = "true";
+      }
+
+      const gauges = {
+        humidity: { min: 0, max: 100, minor: 20, labels: ["0", "20", "40", "60", "80", "100"], unit: "%" },
+        uv: { min: 0, max: 12, minor: 24, labels: ["0", "2", "4", "6", "8", "10", "12"], unit: "" },
+        aqi: { min: 0, max: 300, minor: 30, labels: ["0", "50", "100", "150", "200", "250", "300"], unit: "" },
+        wind: { min: 0, max: 60, minor: 30, labels: ["0", "10", "20", "30", "40", "50", "60"], unit: "" }
+      };
+
+      function setGauge(name, value, displayValue, ariaLabel) {
+        const element = document.querySelector(`[data-gauge="${name}"]`);
+        const config = gauges[name];
+        const numericValue = Number(value);
+        const fraction = Number.isFinite(numericValue) ? Math.max(0, Math.min(1, (numericValue - config.min) / (config.max - config.min))) : 0;
+        const angle = 135 + fraction * 270;
+        const needle = element.querySelector(".gauge-needle");
+        const tail = element.querySelector(".gauge-tail");
+        needle.setAttribute("transform", `rotate(${angle + 90} 100 100)`);
+        tail.setAttribute("transform", `rotate(${angle + 90} 100 100)`);
+        element.querySelector(".gauge-reading").textContent = displayValue;
+        element.querySelector("svg").setAttribute("aria-label", ariaLabel);
+      }
+
+      document.querySelectorAll(".gauge").forEach(element => setupGauge(element, gauges[element.dataset.gauge]));
+
+      function weatherDescription(code) {
+        if (code === 0) return "Clear sky";
+        if (code === 1) return "Mainly clear";
+        if (code === 2) return "Partly cloudy";
+        if (code === 3) return "Overcast";
+        if ([45, 48].includes(code)) return "Fog";
+        if ([51, 53, 55, 56, 57].includes(code)) return "Drizzle";
+        if ([61, 63, 65, 66, 67, 80, 81, 82].includes(code)) return "Rain";
+        if ([71, 73, 75, 77, 85, 86].includes(code)) return "Snow";
+        if ([95, 96, 99].includes(code)) return "Thunderstorm";
+        return "Conditions unavailable";
+      }
+
+      function moonName(phase) {
+        if (!Number.isFinite(phase)) return "Unavailable";
+        if (phase < .04 || phase > .96) return "New moon";
+        if (phase < .21) return "Waxing crescent";
+        if (phase < .29) return "First quarter";
+        if (phase < .46) return "Waxing gibbous";
+        if (phase < .54) return "Full moon";
+        if (phase < .71) return "Waning gibbous";
+        if (phase < .79) return "Last quarter";
+        return "Waning crescent";
+      }
+
+      function localTime(value) {
+        if (!value) return "—";
+        const clock = String(value).match(/T(\d{2}):(\d{2})/);
+        if (!clock) return "—";
+        const hour = Number(clock[1]);
+        return `${hour % 12 || 12}:${clock[2]} ${hour < 12 ? "AM" : "PM"}`;
+      }
+
+      function setText(id, value) { document.getElementById(id).textContent = value; }
+
+      function renderForecast(daily) {
+        const list = document.getElementById("forecast-list");
+        list.replaceChildren();
+        const weekday = new Intl.DateTimeFormat(undefined, { weekday: "short" });
+        for (let index = 0; index < Math.min(3, daily.time.length); index += 1) {
+          const day = document.createElement("div");
+          day.className = "forecast-day";
+          const date = new Date(`${daily.time[index]}T12:00:00`);
+          const title = index === 0 ? "TODAY" : weekday.format(date).toUpperCase();
+          const name = document.createElement("div"); name.className = "day"; name.textContent = title;
+          const icon = document.createElement("div"); icon.className = "icon"; icon.setAttribute("aria-hidden", "true"); icon.textContent = ["☀", "◐", "☁", "☂", "❄", "ϟ"][daily.weather_code[index] === 0 ? 0 : [1, 2].includes(daily.weather_code[index]) ? 1 : [3, 45, 48].includes(daily.weather_code[index]) ? 2 : [71, 73, 75, 77, 85, 86].includes(daily.weather_code[index]) ? 4 : [95, 96, 99].includes(daily.weather_code[index]) ? 5 : 3];
+          const condition = document.createElement("div"); condition.className = "condition"; condition.textContent = weatherDescription(daily.weather_code[index]);
+          const temps = document.createElement("div"); temps.className = "temps";
+          const high = document.createElement("span"); high.textContent = `${numberFormat.format(daily.temperature_2m_max[index])}°`;
+          const low = document.createElement("span"); low.textContent = `${numberFormat.format(daily.temperature_2m_min[index])}°`;
+          temps.append(high, low); day.append(name, icon, condition, temps); list.append(day);
+        }
+      }
+
+      function renderAlerts(alertData) {
+        const container = document.getElementById("alerts-list");
+        container.replaceChildren();
+        if (!alertData || !Array.isArray(alertData.features)) {
+          const line = document.createElement("div"); line.className = "alert-status warn"; line.textContent = "Official alert feed is unavailable right now. Check weather.gov for current alerts."; container.append(line); return;
+        }
+        if (!alertData.features.length) {
+          const line = document.createElement("div"); line.className = "alert-status"; line.textContent = "✓ No active NWS alerts found for this location."; container.append(line); return;
+        }
+        for (const feature of alertData.features) {
+          const props = feature.properties || {};
+          const severity = String(props.severity || "").toLowerCase();
+          const item = document.createElement("article");
+          item.className = `alert-item ${severity === "extreme" || severity === "severe" ? "danger" : "warn"}`;
+          const title = document.createElement("strong"); title.textContent = props.headline || props.event || "Active weather alert";
+          const detail = document.createElement("p"); detail.textContent = `${props.event || "Weather alert"}${props.ends ? ` · Until ${new Date(props.ends).toLocaleString()}` : ""}`;
+          item.append(title, detail);
+          if (typeof props.web === "string" && props.web.startsWith("https://")) {
+            const link = document.createElement("a"); link.href = props.web; link.target = "_blank"; link.rel = "noopener noreferrer"; link.textContent = "View official alert details"; item.append(link);
+          }
+          container.append(item);
+        }
+      }
+
+      async function fetchJson(url) {
+        const response = await fetch(url, { headers: { Accept: "application/json" }, cache: "no-store" });
+        if (!response.ok) throw new Error(`Weather service returned ${response.status}.`);
+        return response.json();
+      }
+
+      async function loadWeather(zip) {
+        loadButton.disabled = true;
+        loadButton.textContent = "LOADING…";
+        zipMessage.textContent = "";
+        try {
+          const geocodeUrl = new URL("https://geocoding-api.open-meteo.com/v1/search");
+          geocodeUrl.search = new URLSearchParams({ name: zip, count: "10", language: "en", format: "json" });
+          const geocode = await fetchJson(geocodeUrl);
+          const place = (geocode.results || []).find(result => result.country_code === "US" && result.latitude && result.longitude);
+          if (!place) throw new Error("That ZIP code could not be found. Enter a valid 5-digit U.S. ZIP code.");
+
+          const forecastUrl = new URL("https://api.open-meteo.com/v1/forecast");
+          forecastUrl.search = new URLSearchParams({
+            latitude: String(place.latitude), longitude: String(place.longitude), timezone: "auto", forecast_days: "3",
+            current: "temperature_2m,relative_humidity_2m,apparent_temperature,weather_code,wind_speed_10m,wind_direction_10m",
+            daily: "temperature_2m_max,temperature_2m_min,weather_code,sunrise,sunset,uv_index_max,moon_phase",
+            temperature_unit: "fahrenheit", wind_speed_unit: "mph"
+          });
+          const airUrl = new URL("https://air-quality-api.open-meteo.com/v1/air-quality");
+          airUrl.search = new URLSearchParams({ latitude: String(place.latitude), longitude: String(place.longitude), timezone: "auto", current: "us_aqi" });
+          const point = `${place.latitude},${place.longitude}`;
+          const [weather, air, alerts] = await Promise.all([
+            fetchJson(forecastUrl),
+            fetchJson(airUrl).catch(() => null),
+            fetchJson(`https://api.weather.gov/alerts/active?point=${encodeURIComponent(point)}`).catch(() => null)
+          ]);
+          const current = weather.current || {};
+          const daily = weather.daily || {};
+          if (!daily.time || !daily.time.length) throw new Error("Weather data is temporarily unavailable. Please try again in a moment.");
+
+          const windDirection = Number.isFinite(current.wind_direction_10m) ? `${Math.round(current.wind_direction_10m)}°` : "—";
+          setText("location-name", `${place.name}${place.admin1 ? `, ${place.admin1}` : ""}`);
+          setText("zip-label", `ZIP ${zip}`);
+          setText("temperature", `${numberFormat.format(current.temperature_2m)}°`);
+          setText("feels-like", `${numberFormat.format(current.apparent_temperature)}°`);
+          setText("condition", weatherDescription(current.weather_code).toUpperCase());
+          setText("wind-readout", `${numberFormat.format(current.wind_speed_10m)} MPH · ${windDirection}`);
+          setText("visibility-readout", `HUMIDITY ${numberFormat.format(current.relative_humidity_2m)}%`);
+          setText("local-clock", `LOCAL TIME ${localTime(current.time)}`);
+          setText("sun-times", `${localTime(daily.sunrise?.[0])} / ${localTime(daily.sunset?.[0])}`);
+          setText("moon-phase", moonName(daily.moon_phase?.[0]));
+          setText("humidity-value", `${numberFormat.format(current.relative_humidity_2m)}%`);
+          setText("time-value", localTime(current.time));
+          setGauge("humidity", current.relative_humidity_2m, `${numberFormat.format(current.relative_humidity_2m)}%`, `Humidity ${numberFormat.format(current.relative_humidity_2m)} percent`);
+          setGauge("uv", daily.uv_index_max?.[0], Number.isFinite(daily.uv_index_max?.[0]) ? daily.uv_index_max[0].toFixed(1) : "—", `UV index ${daily.uv_index_max?.[0] ?? "unavailable"}`);
+          const aqi = air?.current?.us_aqi;
+          setGauge("aqi", aqi, Number.isFinite(aqi) ? String(Math.round(aqi)) : "N/A", `US air quality index ${aqi ?? "unavailable"}`);
+          setGauge("wind", current.wind_speed_10m, `${numberFormat.format(current.wind_speed_10m)}`, `Wind speed ${numberFormat.format(current.wind_speed_10m)} miles per hour`);
+          renderForecast(daily);
+          renderAlerts(alerts);
+          setText("updated-at", `MODEL UPDATE ${localTime(current.time)} · TIMES SHOWN IN LOCAL TIME`);
+          zipScreen.hidden = true;
+          dashboard.hidden = false;
+        } catch (error) {
+          zipMessage.textContent = error instanceof Error ? error.message : "Could not load weather. Please try again.";
+        } finally {
+          loadButton.disabled = false;
+          loadButton.textContent = "LOAD WEATHER";
+        }
+      }
+
+      zipForm.addEventListener("submit", event => {
+        event.preventDefault();
+        if (!zipInput.value.trim().match(/^\d{5}$/)) {
+          zipMessage.textContent = "Enter a valid 5-digit U.S. ZIP code.";
+          zipInput.focus();
+          return;
+        }
+        loadWeather(zipInput.value.trim());
+      });
+      document.getElementById("change-zip").addEventListener("click", () => {
+        dashboard.hidden = true;
+        zipScreen.hidden = false;
+        zipInput.focus();
+      });
+    })();
+  </script>
+</body>
+</html>
